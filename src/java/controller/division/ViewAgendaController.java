@@ -18,7 +18,7 @@ import model.iam.User;
  */
 @WebServlet(urlPatterns = "/division/agenda")
 public class ViewAgendaController extends BaseRequiredAuthorizationController {
-âdasdasdasdasda
+
     @Override
     protected void processPost(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
     }
