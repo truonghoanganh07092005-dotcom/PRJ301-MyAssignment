@@ -21,17 +21,12 @@
                   var(--bg1);
     }
     .box{
-      position:relative; width:100%; max-width:400px; padding:56px 48px 40px;
+      width:100%; max-width:400px; padding:40px 36px;
       background:var(--card); border:1px solid var(--border); border-radius:18px;
       box-shadow:0 20px 60px rgba(26,115,232,.08), 0 8px 20px rgba(0,0,0,.05);
       animation:pop .25s ease-out;
     }
     @keyframes pop{from{transform:translateY(8px);opacity:.0}to{transform:none;opacity:1}}
-    .logo{
-      position:absolute; top:-40px; left:-40px; width:88px; height:88px; border-radius:50%;
-      background:#fff url('<%=ctx%>/img/sonnt.jpg') center/cover no-repeat;
-      box-shadow:0 0 0 6px #fff, 0 6px 20px rgba(0,0,0,.15);
-    }
     h2{margin:0 0 22px; text-align:center; font-size:22px; letter-spacing:.2px}
     label{display:block; margin-top:12px; font-weight:600; font-size:14px}
     .input{
@@ -57,13 +52,12 @@
       margin:-6px 0 12px; padding:10px 12px; border-radius:10px;
       background:#fde8e8; color:#b91c1c; border:1px solid #f8caca; font-size:14px;
     }
-    .foot{margin-top:16px; text-align:center; color:var(--muted); font-size:13px}
+    .foot{margin-top:16px; text-align:center; color:#6b7280; font-size:13px}
   </style>
 </head>
 <body>
-  <div class="box">
-    <div class="logo" aria-hidden="true"></div>
 
+  <div class="box">
     <h2>Đăng nhập hệ thống</h2>
 
     <% if (error != null) { %>
@@ -78,7 +72,7 @@
       <div class="pw-wrap">
         <input id="pw" class="input" type="password" name="password" required />
         <button type="button" class="toggle" aria-label="Hiện/ẩn mật khẩu" onclick="togglePw(this)">
-          <!-- icon mắt mặc định -->
+          <!-- icon mắt -->
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/>
@@ -90,7 +84,7 @@
       <button class="btn" type="submit">Đăng nhập</button>
     </form>
 
-
+   
   </div>
 
   <script>

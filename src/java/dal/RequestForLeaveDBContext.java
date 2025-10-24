@@ -1,109 +1,154 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package dal;
 
-import java.util.ArrayList;
-import model.RequestForLeave;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import model.Employee;
+import model.RequestForLeave;
 
-/**
- *
- * @author sonnt
- */
 public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
 
-    public ArrayList<RequestForLeave> getByEmployeeAndSubodiaries(int eid) {
-        ArrayList<RequestForLeave> rfls = new ArrayList<>();
-        try {
-            String sql = """
-                                     WITH Org AS (
-                                     \t-- get current employee - eid = @eid
-                                     \tSELECT *, 0 as lvl FROM Employee e WHERE e.eid = ?
-                                     \t
-                                     \tUNION ALL
-                                     \t-- expand to other subodinaries
-                                     \tSELECT c.*,o.lvl + 1 as lvl FROM Employee c JOIN Org o ON c.supervisorid = o.eid
-                                     )
-                                     SELECT
-                                     \t\t[rid]
-                                     \t  ,[created_by]
-                                     \t  ,e.ename as [created_name]
-                                           ,[created_time]
-                                           ,[from]
-                                           ,[to]
-                                           ,[reason]
-                                           ,[status]
-                                           ,[processed_by]
-                                     \t  ,p.ename as [processed_name]
-                                     FROM Org e INNER JOIN [RequestForLeave] r ON e.eid = r.created_by
-                                     \t\t\tLEFT JOIN Employee p ON p.eid = r.processed_by""";
-            PreparedStatement stm = connection.prepareStatement(sql);
+    /**
+     * Lấy Top N đơn gần đây của 1 employee (đổ ra mục "Đơn gần đây").
+     */
+    public List<RequestForLeave> recentOfEmployee(int eid, int top) {
+        top = Math.max(1, Math.min(top, 50)); // an toàn
+        String sql =
+              "SELECT TOP " + top + " "
+            + "       r.rid, r.created_by, e.ename AS created_name, "
+            + "       r.created_time, r.[from], r.[to], r.[reason], r.[status], "
+            + "       r.processed_by, p.ename AS processed_name, r.title "
+            + "FROM RequestForLeave r "
+            + "JOIN Employee e ON e.eid = r.created_by "
+            + "LEFT JOIN Employee p ON p.eid = r.processed_by "
+            + "WHERE r.created_by = ? "
+            + "ORDER BY r.created_time DESC";
+
+        List<RequestForLeave> list = new ArrayList<>();
+        try (PreparedStatement stm = connection.prepareStatement(sql)) {
             stm.setInt(1, eid);
-            ResultSet rs = stm.executeQuery();
-            while(rs.next())
-            {
-                RequestForLeave rfl = new RequestForLeave();
-                
-                rfl.setCreated_time(rs.getTimestamp("created_time"));
-                rfl.setFrom(rs.getDate("from"));
-                rfl.setTo(rs.getDate("to"));
-                rfl.setReason(rs.getString("reason"));
-                rfl.setStatus(rs.getInt("status"));
-                
-                Employee created_by = new Employee();
-                created_by.setId(rs.getInt("created_by"));
-                created_by.setName(rs.getString("created_name"));
-                rfl.setCreated_by(created_by);
-                
-                int processed_by_id = rs.getInt("processed_by");
-                if(processed_by_id!=0)
-                {
-                    Employee processed_by = new Employee();
-                    processed_by.setId(rs.getInt("processed_by"));
-                    processed_by.setName(rs.getString("processed_name"));
-                    rfl.setProcessed_by(processed_by);
+            try (ResultSet rs = stm.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
                 }
-                
-                rfls.add(rfl);
             }
         } catch (SQLException ex) {
-            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(RequestForLeaveDBContext.class.getName())
+                  .log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
         }
-        finally
-        {
+        return list;
+    }
+
+    /**
+     * Lấy tất cả đơn của employee hiện tại và toàn bộ cấp dưới (đệ quy),
+     * sắp xếp mới nhất trước.
+     */
+    public ArrayList<RequestForLeave> getByEmployeeAndSubodiaries(int eid) {
+        ArrayList<RequestForLeave> rfls = new ArrayList<>();
+        String sql = """
+            WITH Org AS (
+               SELECT *, 0 AS lvl FROM Employee e WHERE e.eid = ?
+               UNION ALL
+               SELECT c.*, o.lvl + 1 AS lvl
+               FROM Employee c JOIN Org o ON c.supervisorid = o.eid
+            )
+            SELECT
+                   r.rid,
+                   r.created_by,
+                   ce.ename AS created_name,
+                   r.created_time,
+                   r.[from],
+                   r.[to],
+                   r.[reason],
+                   r.[status],
+                   r.processed_by,
+                   pe.ename AS processed_name,
+                   r.title
+            FROM Org o
+            JOIN RequestForLeave r  ON r.created_by = o.eid
+            JOIN Employee       ce  ON ce.eid = r.created_by
+            LEFT JOIN Employee  pe  ON pe.eid = r.processed_by
+            ORDER BY r.created_time DESC
+            """;
+        try (PreparedStatement stm = connection.prepareStatement(sql)) {
+            stm.setInt(1, eid);
+            try (ResultSet rs = stm.executeQuery()) {
+                while (rs.next()) {
+                    rfls.add(mapRow(rs));
+                }
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName())
+                  .log(Level.SEVERE, null, ex);
+        } finally {
             closeConnection();
         }
         return rfls;
     }
 
+    /**
+     * Map 1 hàng ResultSet -> RequestForLeave (NULL-safe).
+     */
+    private RequestForLeave mapRow(ResultSet rs) throws SQLException {
+        RequestForLeave rfl = new RequestForLeave();
+
+        rfl.setRid(rs.getInt("rid"));
+        rfl.setCreated_time(rs.getTimestamp("created_time"));
+        rfl.setFrom(rs.getDate("from"));
+        rfl.setTo(rs.getDate("to"));
+        rfl.setReason(rs.getString("reason"));
+        rfl.setStatus(rs.getInt("status"));
+        try {
+            // nếu có cột title trong DB
+            rfl.setTitle(rs.getString("title"));
+        } catch (SQLException ignore) { /* title không tồn tại thì bỏ qua */ }
+
+        // created_by
+        Employee created = new Employee();
+        created.setId(rs.getInt("created_by"));
+        created.setName(rs.getString("created_name"));
+        rfl.setCreated_by(created);
+
+        // processed_by (NULL-safe)
+        Integer processedId = (Integer) rs.getObject("processed_by"); // null nếu DB là NULL
+        if (processedId != null) {
+            Employee processed = new Employee();
+            processed.setId(processedId);
+            processed.setName(rs.getString("processed_name"));
+            rfl.setProcessed_by(processed);
+        }
+
+        return rfl;
+    }
+
+    /* ====== Các method CRUD chưa dùng có thể để trống hoặc implement sau ====== */
+
     @Override
     public ArrayList<RequestForLeave> list() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public RequestForLeave get(int id) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public void insert(RequestForLeave model) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public void update(RequestForLeave model) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public void delete(RequestForLeave model) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        throw new UnsupportedOperationException("Not supported yet.");
     }
-
 }
