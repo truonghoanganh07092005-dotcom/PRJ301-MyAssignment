@@ -1,50 +1,62 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package controller.iam;
 
 import dal.UserDBContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 import model.iam.User;
 
-/**
- *
- * @author sonnt
- */
-@WebServlet(urlPatterns = "/login")
+@WebServlet("/login")
 public class LoginController extends HttpServlet {
+
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String username = req.getParameter("username");
-        String password = req.getParameter("password");
-        
-        //validation (santinization)
-        
-        UserDBContext db = new UserDBContext();
-        User u = db.get(username, password);
-        if(u!=null)
-        {
-            HttpSession session = req.getSession();
-            session.setAttribute("auth", u);
-            //print login successful!
-            req.setAttribute("message", "Login Successful!");
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        // nếu đã đăng nhập rồi thì vào home
+        HttpSession s = req.getSession(false);
+        if (s != null && s.getAttribute("user") != null) {
+            resp.sendRedirect(req.getContextPath() + "/home");
+            return;
         }
-        else
-        {
-            req.setAttribute("message", "Login Failed!");
-        }
-        req.getRequestDispatcher("view/auth/message.jsp").forward(req, resp);
+        req.getRequestDispatcher("view/auth/login.jsp").forward(req, resp);
     }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        req.getRequestDispatcher("view/auth/login.jsp").forward(req, resp);
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        req.setCharacterEncoding("UTF-8");
+        String username = (req.getParameter("username")==null?"":req.getParameter("username").trim());
+        String password = (req.getParameter("password")==null?"":req.getParameter("password").trim());
+
+        if (username.isEmpty() || password.isEmpty()) {
+            req.setAttribute("error", "Vui lòng nhập đủ Username và Password.");
+            req.setAttribute("username", username);
+            req.getRequestDispatcher("view/auth/login.jsp").forward(req, resp);
+            return;
+        }
+
+        try {
+            UserDBContext db = new UserDBContext();
+            User u = db.get(username, password);
+            if (u != null) {
+                // regenerate session
+                HttpSession old = req.getSession(false);
+                if (old != null) old.invalidate();
+                HttpSession s = req.getSession(true);
+                s.setAttribute("user", u);
+                s.setMaxInactiveInterval(30*60);
+                resp.sendRedirect(req.getContextPath() + "/home");
+            } else {
+                req.setAttribute("error", "Sai username hoặc password.");
+                req.setAttribute("username", username);
+                req.getRequestDispatcher("view/auth/login.jsp").forward(req, resp);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            req.setAttribute("error", "Có lỗi hệ thống khi đăng nhập.");
+            req.setAttribute("username", username);
+            req.getRequestDispatcher("view/auth/login.jsp").forward(req, resp);
+        }
     }
 }
