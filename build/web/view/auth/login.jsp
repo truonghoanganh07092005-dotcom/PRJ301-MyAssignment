@@ -3,6 +3,14 @@
   String error = (String) request.getAttribute("error");
   String username = (String) request.getAttribute("username");
   String ctx = request.getContextPath();
+
+  // Thông báo dạng "info" (khi logout / timeout)
+  String info = null;
+  if ("1".equals(request.getParameter("logged_out"))) {
+      info = "Bạn đã đăng xuất.";
+  } else if ("1".equals(request.getParameter("timeout"))) {
+      info = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+  }
 %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -52,6 +60,10 @@
       margin:-6px 0 12px; padding:10px 12px; border-radius:10px;
       background:#fde8e8; color:#b91c1c; border:1px solid #f8caca; font-size:14px;
     }
+    .info{
+      margin:-6px 0 12px; padding:10px 12px; border-radius:10px;
+      background:#ecfeff; color:#075985; border:1px solid #a5f3fc; font-size:14px;
+    }
     .foot{margin-top:16px; text-align:center; color:#6b7280; font-size:13px}
   </style>
 </head>
@@ -60,6 +72,9 @@
   <div class="box">
     <h2>Đăng nhập hệ thống</h2>
 
+    <% if (info != null) { %>
+      <div class="info"><%= info %></div>
+    <% } %>
     <% if (error != null) { %>
       <div class="err"><%= error %></div>
     <% } %>
@@ -83,8 +98,6 @@
 
       <button class="btn" type="submit">Đăng nhập</button>
     </form>
-
-   
   </div>
 
   <script>

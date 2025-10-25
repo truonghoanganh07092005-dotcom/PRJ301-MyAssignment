@@ -89,7 +89,41 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         }
         return rfls;
     }
+public List<RequestForLeave> recentOfSubordinates(int managerEid, int top) {
+    top = Math.max(1, Math.min(top, 50));
 
+    String sql = 
+          "WITH Org AS (                                                   \n"
+        + "   SELECT eid, 0 AS lvl FROM Employee WHERE eid = ?              \n"
+        + "   UNION ALL                                                     \n"
+        + "   SELECT c.eid, o.lvl + 1 FROM Employee c                       \n"
+        + "   JOIN Org o ON c.supervisorid = o.eid                          \n"
+        + ")                                                                 \n"
+        + "SELECT TOP " + top + "                                          \n"
+        + "   r.rid, r.created_by, ce.ename AS created_name,                \n"
+        + "   r.created_time, r.[from], r.[to], r.[reason], r.[status],     \n"
+        + "   r.processed_by, pe.ename AS processed_name, r.title           \n"
+        + "FROM Org o                                                       \n"
+        + "JOIN RequestForLeave r  ON r.created_by = o.eid                  \n"
+        + "JOIN Employee       ce  ON ce.eid = r.created_by                 \n"
+        + "LEFT JOIN Employee  pe  ON pe.eid = r.processed_by               \n"
+        + "WHERE o.lvl > 0                                                  \n" // chỉ lấy cấp dưới (loại chính mình)
+        + "ORDER BY r.created_time DESC;                                    \n";
+
+    List<RequestForLeave> list = new ArrayList<>();
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setInt(1, managerEid);
+        try (ResultSet rs = stm.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+        }
+    } catch (SQLException ex) {
+        Logger.getLogger(RequestForLeaveDBContext.class.getName())
+              .log(Level.SEVERE, null, ex);
+    } finally { closeConnection(); }
+    return list;
+}
     /**
      * Map 1 hàng ResultSet -> RequestForLeave (NULL-safe).
      */

@@ -24,14 +24,23 @@ public class HomeController extends HttpServlet {
             return;
         }
 
-        // Lấy 5 đơn gần đây của user
         RequestForLeaveDBContext rdb = new RequestForLeaveDBContext();
-        List<RequestForLeave> all = rdb.getByEmployeeAndSubodiaries(u.getId());
-        List<RequestForLeave> recent = all.size() > 5 ? all.subList(0, 5) : all;
-        req.setAttribute("recent", recent);
 
-        req.setAttribute("displayName", u.getDisplayname());
-        req.setAttribute("recent", recent);
-        req.getRequestDispatcher("/WEB-INF/home.jsp").forward(req, resp);
+// 5 đơn của chính user
+List<RequestForLeave> recent = rdb.recentOfEmployee(u.getId(), 5);
+req.setAttribute("recent", recent);
+
+// 5 đơn của cấp dưới (nếu có)
+RequestForLeaveDBContext rdb2 = new RequestForLeaveDBContext();
+List<RequestForLeave> teamRecent = rdb2.recentOfSubordinates(u.getId(), 5);
+if (teamRecent != null && !teamRecent.isEmpty()) {
+    req.setAttribute("teamRecent", teamRecent);
+}
+
+
+req.setAttribute("displayName", u.getDisplayname());
+
+
+req.getRequestDispatcher("/WEB-INF/home.jsp").forward(req, resp);
     }
 }

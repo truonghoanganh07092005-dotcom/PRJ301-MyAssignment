@@ -193,7 +193,55 @@
 %>
       </div>
     </div>
+<%
+  java.util.List<model.RequestForLeave> teamRecent =
+      (java.util.List<model.RequestForLeave>) request.getAttribute("teamRecent");
+  if (teamRecent != null && !teamRecent.isEmpty()) {
+%>
+  <!-- Đơn cấp dưới -->
+  <div class="section-hd" style="margin-top:26px; display:flex; align-items:center; gap:10px">
+    <span>Đơn cấp dưới</span>
+    <a href="<%=ctx%>/request/list?scope=team"
+       style="margin-left:auto; font-size:14px; color:#1a73e8; text-decoration:underline;">
+      Xem tất cả
+    </a>
+  </div>
+  <div class="card">
+    <div class="subpill">Các đơn mới của cấp dưới (tối đa 5 đơn)</div>
 
+    <div class="list">
+    <%
+      for (model.RequestForLeave r : teamRecent) {
+          String title = null;
+          try { title = (String) r.getClass().getMethod("getTitle").invoke(r); } catch(Exception ignore){}
+          String label = (title != null && !title.trim().isEmpty())
+                         ? title
+                         : ("Nghỉ " + (r.getFrom()==null? "" : r.getFrom()) + " – " + (r.getTo()==null? "" : r.getTo()));
+
+          String owner = (r.getCreated_by()!=null && r.getCreated_by().getName()!=null)
+                         ? r.getCreated_by().getName() : "Nhân viên";
+
+          String badgeText, badgeClass;
+          switch (r.getStatus()) {
+              case 1:  badgeText = "Approved";    badgeClass = "approved";   break;
+              case 2:  badgeText = "Rejected";    badgeClass = "rejected";   break;
+              default: badgeText = "In Progress"; badgeClass = "inprogress"; break;
+          }
+    %>
+      <div class="item">
+        <div class="title"><%= label %> • <span style="color:#6b7280"><%= owner %></span></div>
+        <span class="badge <%= badgeClass %>"><%= badgeText %></span>
+        <button class="more" title="Chi tiết"
+                onclick="location.href='<%=ctx%>/request/detail?rid=<%= r.getId() /* hoặc getRid() */ %>'">⋯</button>
+      </div>
+    <%
+      } // end for
+    %>
+    </div>
+  </div>
+<%
+  } // end if teamRecent
+%>
     <!-- Lối tắt nhanh -->
     <div class="section-hd" style="margin-top:22px">Lối tắt nhanh</div>
     <div class="quick">
