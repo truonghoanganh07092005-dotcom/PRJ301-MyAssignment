@@ -1,46 +1,46 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package controller.iam;
 
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 import model.iam.User;
 
-/**
- *
- * @author sonnt
- */
 public abstract class BaseRequiredAuthenticationController extends HttpServlet {
-    private boolean isAuthenticated(HttpServletRequest req) {
-        User u = (User) req.getSession().getAttribute("auth");
-        return u != null;
+
+    private User getLoginUser(HttpServletRequest req) {
+        HttpSession s = req.getSession(false);
+        if (s == null) return null;
+        Object o = s.getAttribute("auth");
+        if (o == null) o = s.getAttribute("user");   // bắt luôn trường hợp bạn lưu là "user"
+        return (o instanceof User) ? (User) o : null;
     }
-    protected abstract void doPost(HttpServletRequest req, HttpServletResponse resp,User user) throws ServletException, IOException;
-    protected abstract void doGet(HttpServletRequest req, HttpServletResponse resp,User user) throws ServletException, IOException;
+
+    // các hàm con cần override
+    protected abstract void doPost(HttpServletRequest req, HttpServletResponse resp, User user)
+            throws ServletException, IOException;
+
+    protected abstract void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
+            throws ServletException, IOException;
+
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (isAuthenticated(req)) {
-           //exec , autheticate -->user
-            User u = (User) req.getSession().getAttribute("auth");
+    protected final void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        User u = getLoginUser(req);
+        if (u != null) {
             doPost(req, resp, u);
         } else {
-            resp.getWriter().println("access denied!");
+            resp.sendRedirect(req.getContextPath() + "/login?timeout=1");
         }
     }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (isAuthenticated(req)) {
-            //do business
-             User u = (User) req.getSession().getAttribute("auth");
+    protected final void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        User u = getLoginUser(req);
+        if (u != null) {
             doGet(req, resp, u);
         } else {
-            resp.getWriter().println("access denied!");
+            resp.sendRedirect(req.getContextPath() + "/login?timeout=1");
         }
     }
 }

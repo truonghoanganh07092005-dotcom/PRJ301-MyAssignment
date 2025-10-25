@@ -15,16 +15,16 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
      */
     public List<RequestForLeave> recentOfEmployee(int eid, int top) {
         top = Math.max(1, Math.min(top, 50)); // an toàn
-        String sql =
-              "SELECT TOP " + top + " "
-            + "       r.rid, r.created_by, e.ename AS created_name, "
-            + "       r.created_time, r.[from], r.[to], r.[reason], r.[status], "
-            + "       r.processed_by, p.ename AS processed_name, r.title "
-            + "FROM RequestForLeave r "
-            + "JOIN Employee e ON e.eid = r.created_by "
-            + "LEFT JOIN Employee p ON p.eid = r.processed_by "
-            + "WHERE r.created_by = ? "
-            + "ORDER BY r.created_time DESC";
+        String sql
+                = "SELECT TOP " + top + " "
+                + "       r.rid, r.created_by, e.ename AS created_name, "
+                + "       r.created_time, r.[from], r.[to], r.[reason], r.[status], "
+                + "       r.processed_by, p.ename AS processed_name, r.title "
+                + "FROM RequestForLeave r "
+                + "JOIN Employee e ON e.eid = r.created_by "
+                + "LEFT JOIN Employee p ON p.eid = r.processed_by "
+                + "WHERE r.created_by = ? "
+                + "ORDER BY r.created_time DESC";
 
         List<RequestForLeave> list = new ArrayList<>();
         try (PreparedStatement stm = connection.prepareStatement(sql)) {
@@ -36,7 +36,7 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
             }
         } catch (SQLException ex) {
             Logger.getLogger(RequestForLeaveDBContext.class.getName())
-                  .log(Level.SEVERE, null, ex);
+                    .log(Level.SEVERE, null, ex);
         } finally {
             closeConnection();
         }
@@ -44,8 +44,8 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
     }
 
     /**
-     * Lấy tất cả đơn của employee hiện tại và toàn bộ cấp dưới (đệ quy),
-     * sắp xếp mới nhất trước.
+     * Lấy tất cả đơn của employee hiện tại và toàn bộ cấp dưới (đệ quy), sắp
+     * xếp mới nhất trước.
      */
     public ArrayList<RequestForLeave> getByEmployeeAndSubodiaries(int eid) {
         ArrayList<RequestForLeave> rfls = new ArrayList<>();
@@ -83,47 +83,51 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
             }
         } catch (SQLException ex) {
             Logger.getLogger(RequestForLeaveDBContext.class.getName())
-                  .log(Level.SEVERE, null, ex);
+                    .log(Level.SEVERE, null, ex);
         } finally {
             closeConnection();
         }
         return rfls;
     }
-public List<RequestForLeave> recentOfSubordinates(int managerEid, int top) {
-    top = Math.max(1, Math.min(top, 50));
 
-    String sql = 
-          "WITH Org AS (                                                   \n"
-        + "   SELECT eid, 0 AS lvl FROM Employee WHERE eid = ?              \n"
-        + "   UNION ALL                                                     \n"
-        + "   SELECT c.eid, o.lvl + 1 FROM Employee c                       \n"
-        + "   JOIN Org o ON c.supervisorid = o.eid                          \n"
-        + ")                                                                 \n"
-        + "SELECT TOP " + top + "                                          \n"
-        + "   r.rid, r.created_by, ce.ename AS created_name,                \n"
-        + "   r.created_time, r.[from], r.[to], r.[reason], r.[status],     \n"
-        + "   r.processed_by, pe.ename AS processed_name, r.title           \n"
-        + "FROM Org o                                                       \n"
-        + "JOIN RequestForLeave r  ON r.created_by = o.eid                  \n"
-        + "JOIN Employee       ce  ON ce.eid = r.created_by                 \n"
-        + "LEFT JOIN Employee  pe  ON pe.eid = r.processed_by               \n"
-        + "WHERE o.lvl > 0                                                  \n" // chỉ lấy cấp dưới (loại chính mình)
-        + "ORDER BY r.created_time DESC;                                    \n";
+    public List<RequestForLeave> recentOfSubordinates(int managerEid, int top) {
+        top = Math.max(1, Math.min(top, 50));
 
-    List<RequestForLeave> list = new ArrayList<>();
-    try (PreparedStatement stm = connection.prepareStatement(sql)) {
-        stm.setInt(1, managerEid);
-        try (ResultSet rs = stm.executeQuery()) {
-            while (rs.next()) {
-                list.add(mapRow(rs));
+        String sql
+                = "WITH Org AS (                                                   \n"
+                + "   SELECT eid, 0 AS lvl FROM Employee WHERE eid = ?              \n"
+                + "   UNION ALL                                                     \n"
+                + "   SELECT c.eid, o.lvl + 1 FROM Employee c                       \n"
+                + "   JOIN Org o ON c.supervisorid = o.eid                          \n"
+                + ")                                                                 \n"
+                + "SELECT TOP " + top + "                                          \n"
+                + "   r.rid, r.created_by, ce.ename AS created_name,                \n"
+                + "   r.created_time, r.[from], r.[to], r.[reason], r.[status],     \n"
+                + "   r.processed_by, pe.ename AS processed_name, r.title           \n"
+                + "FROM Org o                                                       \n"
+                + "JOIN RequestForLeave r  ON r.created_by = o.eid                  \n"
+                + "JOIN Employee       ce  ON ce.eid = r.created_by                 \n"
+                + "LEFT JOIN Employee  pe  ON pe.eid = r.processed_by               \n"
+                + "WHERE o.lvl > 0                                                  \n" // chỉ lấy cấp dưới (loại chính mình)
+                + "ORDER BY r.created_time DESC;                                    \n";
+
+        List<RequestForLeave> list = new ArrayList<>();
+        try (PreparedStatement stm = connection.prepareStatement(sql)) {
+            stm.setInt(1, managerEid);
+            try (ResultSet rs = stm.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
             }
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName())
+                    .log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
         }
-    } catch (SQLException ex) {
-        Logger.getLogger(RequestForLeaveDBContext.class.getName())
-              .log(Level.SEVERE, null, ex);
-    } finally { closeConnection(); }
-    return list;
-}
+        return list;
+    }
+
     /**
      * Map 1 hàng ResultSet -> RequestForLeave (NULL-safe).
      */
@@ -139,7 +143,8 @@ public List<RequestForLeave> recentOfSubordinates(int managerEid, int top) {
         try {
             // nếu có cột title trong DB
             rfl.setTitle(rs.getString("title"));
-        } catch (SQLException ignore) { /* title không tồn tại thì bỏ qua */ }
+        } catch (SQLException ignore) {
+            /* title không tồn tại thì bỏ qua */ }
 
         // created_by
         Employee created = new Employee();
@@ -159,8 +164,55 @@ public List<RequestForLeave> recentOfSubordinates(int managerEid, int top) {
         return rfl;
     }
 
-    /* ====== Các method CRUD chưa dùng có thể để trống hoặc implement sau ====== */
+    @Override
+    public void insert(RequestForLeave m) {
+        String sql = "INSERT INTO RequestForLeave("
+                + " created_by, created_time, [from], [to], reason, status, processed_by, title)"
+                + " VALUES(?, GETDATE(), ?, ?, ?, ?, ?, ?)";
 
+        try (PreparedStatement stm = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stm.setInt(1, m.getCreated_by().getId());
+            stm.setDate(2, m.getFrom());
+            stm.setDate(3, m.getTo());
+            stm.setString(4, m.getReason());
+            stm.setInt(5, m.getStatus()); // 0=InProgress
+            if (m.getProcessed_by() == null) {
+                stm.setNull(6, Types.INTEGER);
+            } else {
+                stm.setInt(6, m.getProcessed_by().getId());
+            }
+            // nếu model bạn chưa có title thì để setNull:
+            if (m.getClass().getDeclaredFields() != null) {
+                try {
+                    // cố gắng lấy title nếu có trong model
+                    String title = (String) m.getClass().getMethod("getTitle").invoke(m);
+                    stm.setString(7, title);
+                } catch (Exception ignore) {
+                    stm.setNull(7, Types.NVARCHAR);
+                }
+            } else {
+                stm.setNull(7, Types.NVARCHAR);
+            }
+
+            stm.executeUpdate();
+            try (ResultSet rs = stm.getGeneratedKeys()) {
+                if (rs.next()) {
+                    // nếu BaseModel dùng id:
+                    try {
+                        m.setId(rs.getInt(1));
+                    } catch (Exception ignore) {
+                    }
+                    // nếu bạn dùng rid riêng thì đổi thành setRid(...)
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            closeConnection();
+        }
+    }
+
+    /* ====== Các method CRUD chưa dùng có thể để trống hoặc implement sau ====== */
     @Override
     public ArrayList<RequestForLeave> list() {
         throw new UnsupportedOperationException("Not supported yet.");
@@ -171,10 +223,7 @@ public List<RequestForLeave> recentOfSubordinates(int managerEid, int top) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override
-    public void insert(RequestForLeave model) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+    
 
     @Override
     public void update(RequestForLeave model) {
