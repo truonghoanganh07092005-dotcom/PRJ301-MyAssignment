@@ -1,16 +1,15 @@
-// src/java/controller/request/CreateController.java
 package controller.request;
 
 import controller.iam.BaseRequiredAuthorizationController;
 import dal.RequestForLeaveDBContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import model.Employee;
 import model.RequestForLeave;
 import model.iam.User;
@@ -36,7 +35,6 @@ public class CreateController extends BaseRequiredAuthorizationController {
 
         List<String> errors = new ArrayList<>();
         LocalDate from = null, to = null;
-
         try { from = LocalDate.parse(fromS); } catch (Exception e) { errors.add("Ngày bắt đầu không hợp lệ."); }
         try { to   = LocalDate.parse(toS);   } catch (Exception e) { errors.add("Ngày kết thúc không hợp lệ."); }
         if (from != null && to != null && to.isBefore(from)) errors.add("Ngày kết thúc phải ≥ ngày bắt đầu.");
@@ -52,18 +50,29 @@ public class CreateController extends BaseRequiredAuthorizationController {
             return;
         }
 
+        // build model
         RequestForLeave r = new RequestForLeave();
-        Employee creator = new Employee();
-        creator.setId(user.getId());        // nếu User có getEid() thì đổi cho khớp
+        Employee creator = new Employee(); creator.setId(user.getId());
         r.setCreated_by(creator);
         r.setFrom(java.sql.Date.valueOf(from));
         r.setTo(java.sql.Date.valueOf(to));
         r.setReason(reason);
-        r.setStatus(0);
-        r.setProcessed_by(null);
-        try { r.getClass().getMethod("setTitle", String.class).invoke(r, title); } catch (Exception ignore){}
+        r.setStatus(0);               // In Progress
+        r.setTitle(title);
 
-        new RequestForLeaveDBContext().insert(r);
-        resp.sendRedirect(req.getContextPath() + "/request/my?created=1");
+        int rid = new RequestForLeaveDBContext().insertReturningId(r);
+
+        // flash báo thành công
+        req.getSession().setAttribute("flash", "Đã tạo đơn thành công!");
+
+        // NẾU KHÔNG CÓ QUYỀN /request/my thì không redirect vào đó
+        @SuppressWarnings("unchecked")
+        Set<String> perms = (Set<String>) req.getSession().getAttribute("perms");
+        boolean canViewMy = perms != null && perms.contains("/request/my");
+
+        String ctx = req.getContextPath();
+        String next = canViewMy ? (ctx + "/request/my?created=" + rid)
+                                : (ctx + "/home");
+        resp.sendRedirect(next);
     }
 }
