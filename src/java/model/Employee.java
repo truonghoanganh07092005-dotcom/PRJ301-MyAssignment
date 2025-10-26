@@ -1,40 +1,43 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package model;
 
-/**
- *
- * @author sonnt
- */
+import java.sql.Date;
+
 public class Employee extends BaseModel {
     private String name;
-    private Department dept; 
+
+    // NEW fields
+    private String email;
+    private String phone;
+    private String empCode;   // mã nhân viên
+    private String title;     // chức vụ / vị trí
+    private Date hireDate;    // ngày vào làm (java.sql.Date)
+
+    private Department dept;
     private Employee supervisor;
 
-    public String getName() {
-        return name;
-    }
+    // ---- getter/setter cũ ----
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public Department getDept() { return dept; }
+    public void setDept(Department dept) { this.dept = dept; }
 
-    public Department getDept() {
-        return dept;
-    }
+    public Employee getSupervisor() { return supervisor; }
+    public void setSupervisor(Employee supervisor) { this.supervisor = supervisor; }
 
-    public void setDept(Department dept) {
-        this.dept = dept;
-    }
+    // ---- getter/setter mới ----
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public Employee getSupervisor() {
-        return supervisor;
-    }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
-    public void setSupervisor(Employee supervisor) {
-        this.supervisor = supervisor;
-    }
-    
+    public String getEmpCode() { return empCode; }
+    public void setEmpCode(String empCode) { this.empCode = empCode; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public Date getHireDate() { return hireDate; }
+    public void setHireDate(Date hireDate) { this.hireDate = hireDate; }
 }

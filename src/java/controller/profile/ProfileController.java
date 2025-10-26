@@ -8,7 +8,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
 import java.util.Date;
 import java.util.stream.Collectors;
 import model.Employee;
@@ -22,34 +21,23 @@ public class ProfileController extends BaseRequiredAuthenticationController {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
 
-        // ===== Display name (ưu tiên displayname -> fullname -> name -> username)
+        // Display name (ưu tiên displayname -> fullname -> name -> username)
         String displayName = firstNotBlank(
-                safe(user.getDisplayName()),
-                safe(user.getFullName()),
-                safe(user.getName()),
+                safe(user.getDisplayname()),   // User của bạn là displayname (lowercase)
+                safe(fromUserStr(user, "getFullName")),
+                safe(fromUserStr(user, "getName")),
                 safe(user.getUsername())
         );
 
-        // ===== Lấy Employee nếu có
         Employee emp = user.getEmployee();
 
-        // ===== Build các field dưới dạng String (JSP chỉ in ra, không format thêm)
         String username   = safe(user.getUsername());
-        String email      = firstNotBlank(safe(user.getEmail()),     fromEmpStr(emp, "getEmail"));
-        String phone      = firstNotBlank(safe(user.getPhone()),     fromEmpStr(emp, "getPhone"));
-        String empCode    = firstNotBlank(safe(user.getCode()),      fromEmpStr(emp, "getCode"));
-
-        String position   = firstNotBlank(
-                safe(user.getTitle()),             // nếu User có convenience getter
-                fromEmpStr(emp, "getTitle"),
-                fromEmpStr(emp, "getPosition")
-        );
-
+        String email      = firstNotBlank(fromEmpStr(emp, "getEmail"));
+        String phone      = firstNotBlank(fromEmpStr(emp, "getPhone"));
+        String empCode    = firstNotBlank(fromEmpStr(emp, "getEmpCode"));
+        String position   = firstNotBlank(fromEmpStr(emp, "getTitle"));
         String department = resolveDepartmentName(user, emp);
-
-        // hire date -> String dd/MM/yyyy (nếu null thì "")
         String hireDate   = formatDate(resolveHireDate(user, emp));
-
         String manager    = resolveManagerName(emp);
 
         String roles = "";
@@ -60,7 +48,7 @@ public class ProfileController extends BaseRequiredAuthenticationController {
                     .collect(Collectors.joining(", "));
         }
 
-        // ===== Gán attribute cho view (đều là String)
+        // push to view
         req.setAttribute("displayName", displayName);
         req.setAttribute("username",    username);
         req.setAttribute("email",       email);
@@ -68,14 +56,13 @@ public class ProfileController extends BaseRequiredAuthenticationController {
         req.setAttribute("empCode",     empCode);
         req.setAttribute("department",  department);
         req.setAttribute("position",    position);
-        req.setAttribute("hireDate",    hireDate);      // <-- String
+        req.setAttribute("hireDate",    hireDate);
         req.setAttribute("manager",     manager);
         req.setAttribute("roles",       roles);
 
-        // để navbar dùng tên hiển thị
+        // navbar
         req.setAttribute("_displayName", displayName);
 
-        // forward đúng chỗ file JSP của bạn
         req.getRequestDispatcher("/view/profile.jsp").forward(req, resp);
     }
 
@@ -85,73 +72,66 @@ public class ProfileController extends BaseRequiredAuthenticationController {
         resp.sendRedirect(req.getContextPath() + "/profile");
     }
 
-    /* ================= Helpers ================= */
-
+    // ===== helpers =====
     private static String safe(String s) { return s == null ? "" : s.trim(); }
-
     private static String firstNotBlank(String... arr) {
         for (String s : arr) if (s != null && !s.trim().isEmpty()) return s.trim();
         return "";
     }
-
-    private static String fromEmpStr(Employee emp, String method) {
-        if (emp == null) return "";
-        try {
-            Method m = emp.getClass().getMethod(method);
-            Object v = m.invoke(emp);
-            return v == null ? "" : v.toString();
-        } catch (Exception ignore) { return ""; }
+    private static String fromUserStr(User u, String method) {
+        if (u == null) return "";
+        try { var m = u.getClass().getMethod(method); var v = m.invoke(u); return v==null?"":v.toString(); }
+        catch (Exception ignore) { return ""; }
     }
-
-    private static Object fromEmpObj(Employee emp, String method) {
-        if (emp == null) return null;
-        try {
-            Method m = emp.getClass().getMethod(method);
-            return m.invoke(emp);
-        } catch (Exception ignore) { return null; }
+    private static String fromEmpStr(Employee e, String method) {
+        if (e == null) return "";
+        try { var m = e.getClass().getMethod(method); var v = m.invoke(e); return v==null?"":v.toString(); }
+        catch (Exception ignore) { return ""; }
+    }
+    private static Object fromEmpObj(Employee e, String method) {
+        if (e == null) return null;
+        try { var m = e.getClass().getMethod(method); return m.invoke(e); }
+        catch (Exception ignore) { return null; }
     }
 
     private static String resolveDepartmentName(User user, Employee emp) {
-        // ưu tiên User.getDepartment().getName() nếu có
+        // ưu tiên User.getDepartment()?.getName()
         try {
-            Method m = user.getClass().getMethod("getDepartment");
+            var m = user.getClass().getMethod("getDepartment");
             Object dept = m.invoke(user);
             String name = deptNameByReflection(dept);
             if (!name.isBlank()) return name;
         } catch (Exception ignore) {}
 
-        // fallback: Employee.getDepartment()
-        Object dept = fromEmpObj(emp, "getDepartment");
+        Object dept = null;
+        try {
+            var m = emp!=null ? emp.getClass().getMethod("getDepartment") : null;
+            if (m != null) dept = m.invoke(emp);
+        } catch (Exception ignore) {}
+        if (dept == null && emp != null) {
+            try {
+                var m = emp.getClass().getMethod("getDept");
+                dept = m.invoke(emp);
+            } catch (Exception ignore) {}
+        }
         return deptNameByReflection(dept);
     }
 
     private static String deptNameByReflection(Object dept) {
         if (dept == null) return "";
         for (String g : new String[]{"getName","getDname","getDepartmentName"}) {
-            try {
-                Method m = dept.getClass().getMethod(g);
-                Object v = m.invoke(dept);
-                if (v != null && !v.toString().isBlank()) return v.toString();
+            try { var m = dept.getClass().getMethod(g); var v = m.invoke(dept);
+                  if (v != null && !v.toString().isBlank()) return v.toString();
             } catch (Exception ignore) {}
         }
         return "";
     }
 
     private static Date resolveHireDate(User user, Employee emp) {
-        // ưu tiên User.getHireDate() nếu có
-        try {
-            Method m = user.getClass().getMethod("getHireDate");
-            Object v = m.invoke(user);
-            if (v instanceof Date) return (Date) v;
-        } catch (Exception ignore) {}
-
-        // fallback: Employee.getHireDate()
-        try {
-            Method m = emp!=null ? emp.getClass().getMethod("getHireDate") : null;
-            Object v = (m==null) ? null : m.invoke(emp);
-            if (v instanceof Date) return (Date) v;
-        } catch (Exception ignore) {}
-
+        try { var m = user.getClass().getMethod("getHireDate"); Object v = m.invoke(user);
+              if (v instanceof Date) return (Date) v; } catch (Exception ignore) {}
+        try { var m = emp!=null ? emp.getClass().getMethod("getHireDate") : null; Object v = m==null?null:m.invoke(emp);
+              if (v instanceof Date) return (Date) v; } catch (Exception ignore) {}
         return null;
     }
 
@@ -163,10 +143,10 @@ public class ProfileController extends BaseRequiredAuthenticationController {
     private static String resolveManagerName(Employee emp) {
         if (emp == null) return "";
         try {
-            Method m = emp.getClass().getMethod("getSupervisor");
+            var m = emp.getClass().getMethod("getSupervisor");
             Object sup = m.invoke(emp);
             if (sup != null) {
-                Method gm = sup.getClass().getMethod("getName");
+                var gm = sup.getClass().getMethod("getName");
                 Object v = gm.invoke(sup);
                 return v == null ? "" : v.toString();
             }
