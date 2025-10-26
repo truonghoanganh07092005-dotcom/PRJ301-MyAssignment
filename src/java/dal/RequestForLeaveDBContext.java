@@ -226,6 +226,41 @@ public boolean deleteByOwnerIfInProgress(int rid, int ownerId) {
         closeConnection();
     }
 }
+public List<RequestForLeave> searchOfEmployee(int eid, String q, int top) {
+    top = Math.max(1, Math.min(top, 200));
+    String kw = "%" + q.trim() + "%";
+
+    String sql = "SELECT TOP " + top + " " +
+            " r.rid, r.created_by, ce.ename AS created_name, " +
+            " r.created_time, r.[from], r.[to], r.[reason], r.[status], " +
+            " r.processed_by, pe.ename AS processed_name, r.title " +
+            "FROM RequestForLeave r " +
+            "JOIN Employee ce ON ce.eid = r.created_by " +
+            "LEFT JOIN Employee pe ON pe.eid = r.processed_by " +
+            "WHERE r.created_by = ? " +
+            "  AND (r.title LIKE ? OR r.[reason] LIKE ? " +
+            "       OR CONVERT(VARCHAR(10), r.[from], 120) LIKE ? " +
+            "       OR CONVERT(VARCHAR(10), r.[to], 120) LIKE ?) " +
+            "ORDER BY r.created_time DESC";
+
+    List<RequestForLeave> list = new ArrayList<>();
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setInt(1, eid);
+        stm.setString(2, kw);
+        stm.setString(3, kw);
+        stm.setString(4, kw);
+        stm.setString(5, kw);
+        try (ResultSet rs = stm.executeQuery()) {
+            while (rs.next()) list.add(mapRow(rs));
+        }
+    } catch (SQLException ex) {
+        Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+    } finally {
+        closeConnection();
+    }
+    return list;
+}
+
     // ========================= NOT USED =========================
     @Override public ArrayList<RequestForLeave> list()            { throw new UnsupportedOperationException(); }
     @Override public RequestForLeave get(int id)                  { throw new UnsupportedOperationException(); }
