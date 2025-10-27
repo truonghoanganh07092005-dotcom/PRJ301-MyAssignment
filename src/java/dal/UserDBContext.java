@@ -18,15 +18,18 @@ public class UserDBContext extends DBContext<User> {
                     e.ename,
                     e.email, e.phone, e.emp_code, e.title, e.hire_date,
 
-                    d.dept_id, d.dept_name,
+                    -- hỗ trợ cả dept_id (mới) và did (cũ)
+                    COALESCE(e.dept_id, e.did) AS dept_id,
+                    d.dept_name,
 
-                    mgr.eid  AS manager_id,
+                    -- hỗ trợ cả manager_id (mới) và supervisorid (cũ)
+                    mgr.eid   AS manager_id,
                     mgr.ename AS manager_name
                 FROM [User] u
                 LEFT JOIN Enrollment en ON en.uid = u.uid AND en.active = 1
                 LEFT JOIN Employee   e  ON e.eid = en.eid
-                LEFT JOIN Department d  ON d.dept_id = e.dept_id
-                LEFT JOIN Employee   mgr ON mgr.eid = e.manager_id
+                LEFT JOIN Department d  ON d.dept_id = COALESCE(e.dept_id, e.did)
+                LEFT JOIN Employee   mgr ON mgr.eid = COALESCE(e.manager_id, e.supervisorid)
                 WHERE u.username = ? AND u.[password] = ?
             """;
 
@@ -78,7 +81,6 @@ public class UserDBContext extends DBContext<User> {
         }
     }
 
-    // các phương thức khác giữ nguyên / chưa hỗ trợ
     @Override public ArrayList<User> list() { throw new UnsupportedOperationException(); }
     @Override public User get(int id)       { throw new UnsupportedOperationException(); }
     @Override public void insert(User m)    { throw new UnsupportedOperationException(); }

@@ -14,6 +14,7 @@ import model.iam.User;
 
 @WebServlet("/home")
 public class HomeController extends BaseRequiredAuthenticationController {
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
@@ -25,22 +26,21 @@ public class HomeController extends BaseRequiredAuthenticationController {
             }
         } catch (Exception ignore) {}
 
-        List<RequestForLeave> recent = java.util.Collections.emptyList();
-        List<RequestForLeave> subs   = java.util.Collections.emptyList();
+        List<RequestForLeave> recent = Collections.emptyList();
+        List<RequestForLeave> subs   = Collections.emptyList();
 
         if (eid != null) {
-            // Mỗi call dùng một DBContext khác nhau vì mỗi hàm có closeConnection()
-            recent = new RequestForLeaveDBContext().recentOfEmployee(eid, 5);
-            subs   = new RequestForLeaveDBContext().recentOfSubordinates(eid, 5);
-        }
+            RequestForLeaveDBContext rdb = new RequestForLeaveDBContext();
 
-        Boolean canReview = (Boolean) req.getSession().getAttribute("canReview");
-        if (canReview == null) canReview = false;
+            // Top 5 đơn gần đây của chính nhân viên
+            recent = rdb.recentOfEmployee(eid, 5);
+
+            // LUÔN thử load cấp dưới (nếu có dữ liệu sẽ hiện; nếu không thì danh sách trống)
+            subs = rdb.recentOfSubordinates(eid, 5);
+        }
 
         req.setAttribute("recent", recent);
         req.setAttribute("subs", subs);
-        req.setAttribute("canReview", canReview);
-
         req.getRequestDispatcher("/WEB-INF/home.jsp").forward(req, resp);
     }
 

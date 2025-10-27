@@ -1,44 +1,35 @@
-// controller/request/RequestDeleteController.java
 package controller.request;
 
-import controller.iam.BaseRequiredAuthorizationController;
+import controller.iam.BaseRequiredAuthenticationController;
 import dal.RequestForLeaveDBContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import model.iam.User;
 
-@WebServlet(urlPatterns = "/request/delete")
-public class RequestDeleteController extends BaseRequiredAuthorizationController {
+@WebServlet("/request/delete")
+public class RequestDeleteController extends BaseRequiredAuthenticationController {
 
     @Override
-    protected void processGet(HttpServletRequest req, HttpServletResponse resp, User user)
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
+        int rid = -1;
+        try { rid = Integer.parseInt(req.getParameter("rid")); } catch (Exception ignore) {}
 
-        String ridStr = req.getParameter("rid");
-        if (ridStr == null) {
-            resp.sendRedirect(req.getContextPath() + "/home");
-            return;
+        boolean ok = false;
+        if (rid > 0 && user != null) {
+            ok = new RequestForLeaveDBContext().deleteByOwnerIfInProgress(rid, user.getId());
         }
-
-        int rid = Integer.parseInt(ridStr);
-
-        RequestForLeaveDBContext db = new RequestForLeaveDBContext();
-        boolean ok = db.deleteByOwnerIfInProgress(rid, user.getId());
-
-        if (ok) {
-            req.getSession().setAttribute("flash", "Đã xoá đơn #" + rid);
-        } else {
-            req.getSession().setAttribute("flash",
-                "Không thể xoá đơn (không thuộc bạn hoặc đã xử lý).");
-        }
-        resp.sendRedirect(req.getContextPath() + "/home");
+        // có thể set flash message ở session nếu bạn muốn
+        resp.sendRedirect(req.getContextPath() + "/request/my");
     }
 
     @Override
-    protected void processPost(HttpServletRequest req, HttpServletResponse resp, User user)
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        processGet(req, resp, user);
+        // an toàn: chỉ cho xóa bằng POST
+        resp.sendRedirect(req.getContextPath() + "/request/my");
     }
 }

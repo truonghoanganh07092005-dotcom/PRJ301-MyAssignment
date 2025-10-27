@@ -4,7 +4,8 @@ import controller.iam.BaseRequiredAuthorizationController;
 import dal.RequestForLeaveDBContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -50,9 +51,10 @@ public class CreateController extends BaseRequiredAuthorizationController {
             return;
         }
 
-        // build model
+        // Build model: created_by phải là EID (không phải UID)
         RequestForLeave r = new RequestForLeave();
-        Employee creator = new Employee(); creator.setId(user.getId());
+        Employee creator = new Employee();
+        creator.setId(user.getEmployee().getId()); // EID
         r.setCreated_by(creator);
         r.setFrom(java.sql.Date.valueOf(from));
         r.setTo(java.sql.Date.valueOf(to));
@@ -65,7 +67,7 @@ public class CreateController extends BaseRequiredAuthorizationController {
         // flash báo thành công
         req.getSession().setAttribute("flash", "Đã tạo đơn thành công!");
 
-        // NẾU KHÔNG CÓ QUYỀN /request/my thì không redirect vào đó
+        // Nếu user không có quyền /request/my thì quay về /home
         @SuppressWarnings("unchecked")
         Set<String> perms = (Set<String>) req.getSession().getAttribute("perms");
         boolean canViewMy = perms != null && perms.contains("/request/my");
