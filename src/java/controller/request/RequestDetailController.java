@@ -17,50 +17,40 @@ public class RequestDetailController extends BaseRequiredAuthenticationControlle
     protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
 
-        // rid hợp lệ?
         String ridRaw = req.getParameter("rid");
         int rid;
         try {
             rid = Integer.parseInt(ridRaw);
-        } catch (Exception ex) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
+        } catch (Exception e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "rid không hợp lệ");
             return;
         }
 
-        // lấy EID người đang đăng nhập
-        Integer eid = null;
-        try {
-            if (user != null && user.getEmployee() != null) {
-                eid = user.getEmployee().getId();
-            }
-        } catch (Exception ignore) {}
-        if (eid == null) {
+        Integer viewerEid = null;
+        try { if (user != null && user.getEmployee() != null) viewerEid = user.getEmployee().getId(); }
+        catch (Exception ignore){}
+
+        RequestForLeaveDBContext rdb = new RequestForLeaveDBContext();
+
+        // Quyền xem: chính chủ hoặc quản lý trực tiếp
+        if (viewerEid == null || !rdb.canViewRequest(rid, viewerEid)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
 
-        RequestForLeaveDBContext rdb = new RequestForLeaveDBContext();
-
-        // ✅ Check quyền xem
-        if (!rdb.canViewRequest(rid, eid)) {
-            req.getRequestDispatcher("/WEB-INF/error/403.jsp").forward(req, resp);
-            return;
-        }
-
-        // OK -> load chi tiết
         RequestForLeave r = rdb.get(rid);
         if (r == null) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
 
-        req.setAttribute("request", r);
+        req.setAttribute("r", r);
         req.getRequestDispatcher("/WEB-INF/request/detail.jsp").forward(req, resp);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        resp.sendRedirect(req.getContextPath() + "/home");
+        doGet(req, resp, user);
     }
 }

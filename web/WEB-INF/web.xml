@@ -6,3 +6,12 @@
   <welcome-file>index.jsp</welcome-file>
 </welcome-file-list>
 </web-app>
+<servlet>
+    <servlet-name>RequestDetailController</servlet-name>
+    <servlet-class>controller.request.RequestDetailController</servlet-class>
+</servlet>
+
+<servlet-mapping>
+    <servlet-name>RequestDetailController</servlet-name>
+    <url-pattern>/request/detail</url-pattern>
+</servlet-mapping>
