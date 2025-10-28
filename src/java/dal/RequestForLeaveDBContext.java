@@ -262,6 +262,26 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         finally { closeConnection(); }
         return false;
     }
+/** Chủ đơn huỷ khi đang In Progress (status=0) -> set status=3 (Cancelled) */
+public boolean cancelByOwnerIfInProgress(int rid, int uid) {
+    String sql = """
+        UPDATE r
+        SET r.status = 3
+        FROM RequestForLeave r
+        JOIN Enrollment en ON en.eid = r.created_by AND en.active = 1
+        WHERE r.rid = ? AND en.uid = ? AND r.status = 0
+    """;
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setInt(1, rid);
+        stm.setInt(2, uid);
+        return stm.executeUpdate() > 0;
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+        return false;
+    } finally {
+        closeConnection();
+    }
+}
 
     /* not used */
     @Override public ArrayList<RequestForLeave> list() { throw new UnsupportedOperationException(); }

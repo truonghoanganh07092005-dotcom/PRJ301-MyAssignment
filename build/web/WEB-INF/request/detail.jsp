@@ -1,79 +1,49 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ page import="model.RequestForLeave, model.Employee, model.Department" %>
+<%@ page import="model.RequestForLeave" %>
 <%
-  RequestForLeave r = (RequestForLeave) request.getAttribute("r");
-  String ctx = request.getContextPath();
-  if (r == null) { out.print("Không có dữ liệu"); return; }
+  RequestForLeave r = (RequestForLeave) request.getAttribute("requestObj");
+  if (r == null) { out.print("No data"); return; }
+  String createdBy = r.getCreated_by()!=null ? r.getCreated_by().getName() : "—";
+  String title = (r.getTitle()==null || r.getTitle().isBlank())
+                 ? ("Nghỉ " + r.getFrom() + " – " + r.getTo())
+                 : r.getTitle();
 
-  Employee e = r.getCreated_by();
-  String empName = e!=null && e.getName()!=null ? e.getName() : "N/A";
-  String deptName = (e!=null && e.getDept()!=null && e.getDept().getName()!=null) ? e.getDept().getName() : "—";
-  String statusText = switch (r.getStatus()) {
-    case 0 -> "In Progress";
-    case 1 -> "Approved";
-    case 2 -> "Rejected";
-    default -> "Unknown";
-  };
+  String status;
+  switch (r.getStatus()) {
+    case 1: status = "Approved"; break;
+    case 2: status = "Rejected"; break;
+    case 3: status = "Cancelled"; break;   // << thêm
+    default: status = "In Progress";
+  }
+  String ctx = request.getContextPath();
 %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<title>Chi tiết đơn nghỉ #<%= r.getRid() %></title>
-<style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7fb;margin:0}
-  .wrap{max-width:920px;margin:28px auto;padding:24px;background:#fff;border:1px solid #e6e9f0;border-radius:16px;box-shadow:0 8px 28px rgba(16,24,40,.06)}
-  h1{margin:0 0 16px}
-  .grid{display:grid;grid-template-columns:220px 1fr;gap:10px 18px}
-  .label{color:#64748b}
-  .val{font-weight:600}
-  .chip{display:inline-block;padding:6px 12px;border-radius:999px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412}
-  .chip.ok{border-color:#bbf7d0;background:#f0fdf4;color:#065f46}
-  .chip.no{border-color:#fecaca;background:#fef2f2;color:#991b1b}
-  .toolbar{margin-top:18px;display:flex;gap:10px}
-  .btn{padding:10px 14px;border-radius:10px;border:1px solid #e6e9f0;background:#fff;text-decoration:none;color:#0f172a}
-  .btn.primary{background:#2563eb;color:#fff;border-color:#2563eb}
-</style>
+  <meta charset="UTF-8">
+  <title>Chi tiết đơn #<%=r.getRid()%></title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7fb;margin:0}
+    .page{max-width:900px;margin:24px auto;background:#fff;border:1px solid #e6e9f0;border-radius:14px;padding:16px 20px}
+    h1{margin:6px 0 16px}
+    .row{display:flex;gap:12px;margin:8px 0}
+    .label{width:160px;color:#6b7280}
+    .val{flex:1}
+    a.btn{display:inline-block;padding:8px 14px;border:1px solid #d1d5db;border-radius:10px;text-decoration:none;color:#111}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Chi tiết đơn nghỉ #<%= r.getRid() %></h1>
+  <div class="page">
+    <a class="btn" href="<%=ctx%>/home">← Về Home</a>
+    <h1>Đơn nghỉ #<%=r.getRid()%></h1>
 
-  <div style="margin:10px 0 18px">
-    <span class="chip <%= r.getStatus()==1?"ok":(r.getStatus()==2?"no":"") %>"><%= statusText %></span>
+    <div class="row"><div class="label">Tiêu đề</div><div class="val"><%=title%></div></div>
+    <div class="row"><div class="label">Người tạo</div><div class="val"><%=createdBy%></div></div>
+    <div class="row"><div class="label">Từ ngày</div><div class="val"><%=r.getFrom()%></div></div>
+    <div class="row"><div class="label">Đến ngày</div><div class="val"><%=r.getTo()%></div></div>
+    <div class="row"><div class="label">Lý do</div><div class="val"><pre style="margin:0"><%=r.getReason()%></pre></div></div>
+    <div class="row"><div class="label">Trạng thái</div><div class="val"><%=status%></div></div>
+    <div class="row"><div class="label">Tạo lúc</div><div class="val"><%=r.getCreated_time()%></div></div>
   </div>
-
-  <div class="grid">
-    <div class="label">Tiêu đề</div>
-    <div class="val"><%= (r.getTitle()==null||r.getTitle().isBlank())?"(Không có)":r.getTitle() %></div>
-
-    <div class="label">Người tạo</div>
-    <div class="val"><%= empName %></div>
-
-    <div class="label">Phòng ban</div>
-    <div class="val"><%= deptName %></div>
-
-    <div class="label">Từ ngày</div>
-    <div class="val"><%= r.getFrom() %></div>
-
-    <div class="label">Đến ngày</div>
-    <div class="val"><%= r.getTo() %></div>
-
-    <div class="label">Lý do</div>
-    <div class="val"><%= r.getReason()==null?"":r.getReason() %></div>
-
-    <div class="label">Tạo lúc</div>
-    <div class="val"><%= r.getCreated_time() %></div>
-  </div>
-
-  <div class="toolbar">
-    <a class="btn" href="<%= ctx %>/home">Quay lại</a>
-    <a class="btn" href="<%= ctx %>/request/print?rid=<%= r.getRid() %>">In / xuất PDF</a>
-    <%-- Bạn có thể bật 2 nút dưới khi đã có luồng duyệt --%>
-    <%-- <a class="btn" href="<%= ctx %>/request/approve?rid=<%= r.getRid()%>">Duyệt</a> --%>
-    <%-- <a class="btn" href="<%= ctx %>/request/reject?rid=<%= r.getRid()%>">Từ chối</a> --%>
-    <a class="btn primary" href="<%= ctx %>/request/delete?rid=<%= r.getRid() %>">Xóa đơn</a>
-  </div>
-</div>
 </body>
 </html>

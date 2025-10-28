@@ -10,7 +10,7 @@ import java.io.IOException;
 import model.RequestForLeave;
 import model.iam.User;
 
-@WebServlet("/request/detail")
+@WebServlet(urlPatterns = {"/request/detail"})
 public class RequestDetailController extends BaseRequiredAuthenticationController {
 
     @Override
@@ -18,22 +18,26 @@ public class RequestDetailController extends BaseRequiredAuthenticationControlle
             throws ServletException, IOException {
 
         String ridRaw = req.getParameter("rid");
-        int rid;
-        try {
-            rid = Integer.parseInt(ridRaw);
-        } catch (Exception e) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "rid không hợp lệ");
+        if (ridRaw == null || ridRaw.isBlank()) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
             return;
         }
 
-        Integer viewerEid = null;
-        try { if (user != null && user.getEmployee() != null) viewerEid = user.getEmployee().getId(); }
-        catch (Exception ignore){}
+        int rid;
+        try {
+            rid = Integer.parseInt(ridRaw);
+        } catch (NumberFormatException e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+
+        Integer eid = (user != null && user.getEmployee() != null)
+                ? user.getEmployee().getId() : null;
 
         RequestForLeaveDBContext rdb = new RequestForLeaveDBContext();
 
-        // Quyền xem: chính chủ hoặc quản lý trực tiếp
-        if (viewerEid == null || !rdb.canViewRequest(rid, viewerEid)) {
+        // chỉ cho xem nếu là chính chủ hoặc quản lý trực tiếp
+        if (!rdb.canViewRequest(rid, eid)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
@@ -44,13 +48,15 @@ public class RequestDetailController extends BaseRequiredAuthenticationControlle
             return;
         }
 
-        req.setAttribute("r", r);
-        req.getRequestDispatcher("/WEB-INF/request/detail.jsp").forward(req, resp);
+        req.setAttribute("requestObj", r);
+        // CHÚ Ý: trong project của bạn file detail.jsp nằm ở /view/detail.jsp
+        req.getRequestDispatcher("/view/detail.jsp").forward(req, resp);
     }
 
+    // để class không còn abstract
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        doGet(req, resp, user);
+        resp.sendRedirect(req.getContextPath() + "/home");
     }
 }
