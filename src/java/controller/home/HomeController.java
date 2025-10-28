@@ -19,6 +19,10 @@ public class HomeController extends BaseRequiredAuthenticationController {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
 
+        List<RequestForLeave> recent = Collections.emptyList();
+        List<RequestForLeave> subs   = Collections.emptyList();
+
+        // recent (đơn của tôi) lấy theo EID
         Integer eid = null;
         try {
             if (user != null && user.getEmployee() != null) {
@@ -26,17 +30,14 @@ public class HomeController extends BaseRequiredAuthenticationController {
             }
         } catch (Exception ignore) {}
 
-        List<RequestForLeave> recent = Collections.emptyList();
-        List<RequestForLeave> subs   = Collections.emptyList();
-
         if (eid != null) {
-            RequestForLeaveDBContext rdb = new RequestForLeaveDBContext();
+            // dùng instance MỚI cho mỗi query vì DBContext tự đóng connection sau mỗi lần chạy
+            recent = new RequestForLeaveDBContext().recentOfEmployee(eid, 5);
+        }
 
-            // Top 5 đơn gần đây của chính nhân viên
-            recent = rdb.recentOfEmployee(eid, 5);
-
-            // LUÔN thử load cấp dưới (nếu có dữ liệu sẽ hiện; nếu không thì danh sách trống)
-            subs = rdb.recentOfSubordinates(eid, 5);
+        // subs (đơn cấp dưới) lấy theo UID quản lý → map sang EID bên trong DBContext
+        if (user != null) {
+            subs = new RequestForLeaveDBContext().recentOfSubordinatesByUid(user.getId(), 5);
         }
 
         req.setAttribute("recent", recent);

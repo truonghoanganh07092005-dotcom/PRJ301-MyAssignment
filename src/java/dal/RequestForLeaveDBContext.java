@@ -9,14 +9,13 @@ import model.RequestForLeave;
 
 public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
 
-    /* ===================== Helpers ===================== */
+    /* ============ Helpers ============ */
 
     private Integer getIntOrNull(ResultSet rs, String col) throws SQLException {
         Object o = rs.getObject(col);
-        return (o == null) ? null : ((Number) o).intValue();
+        return (o == null) ? null : ((Number)o).intValue();
     }
-
-    private String nz(String s) { return s == null ? "" : s; }
+    private String nz(String s){ return s == null ? "" : s; }
 
     private RequestForLeave mapRow(ResultSet rs) throws SQLException {
         RequestForLeave r = new RequestForLeave();
@@ -28,7 +27,6 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         r.setCreated_time(rs.getTimestamp("created_time"));
         r.setStatus(rs.getInt("status"));
 
-        // Người tạo
         Employee e = new Employee();
         e.setId(rs.getInt("created_id"));
         e.setName(nz(rs.getString("created_name")));
@@ -40,12 +38,12 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
             e.setDept(d);
         }
         r.setCreated_by(e);
-
         return r;
     }
 
-    /* ===================== CRUD nhỏ + Business ===================== */
+    /* ============ CRUD/Business ============ */
 
+    /** Lấy chi tiết 1 đơn theo rid */
     @Override
     public RequestForLeave get(int rid) {
         String sql = """
@@ -74,10 +72,10 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         String sql = """
             INSERT INTO RequestForLeave (created_by, [from], [to], reason, status, title, created_time)
             VALUES (?, ?, ?, ?, ?, ?, GETDATE());
-            SELECT SCOPE_IDENTITY() AS rid;
+            SELECT SCOPE_IDENTITY();
         """;
         try (PreparedStatement stm = connection.prepareStatement(sql)) {
-            stm.setInt(1, r.getCreated_by().getId());             // EID
+            stm.setInt(1, r.getCreated_by().getId());
             stm.setDate(2, new java.sql.Date(r.getFrom().getTime()));
             stm.setDate(3, new java.sql.Date(r.getTo().getTime()));
             stm.setString(4, r.getReason());
@@ -90,7 +88,7 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         return -1;
     }
 
-    /** Top N đơn gần đây của chính nhân viên */
+    /** Top N đơn gần đây của chính nhân viên (theo EID) */
     public List<RequestForLeave> recentOfEmployee(int eid, int limit) {
         List<RequestForLeave> list = new ArrayList<>();
         String sql = """
@@ -115,7 +113,7 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         return list;
     }
 
-    /** Top N đơn của cấp dưới (manager_id | supervisorid) */
+    /** Top N đơn cấp dưới của 1 EID quản lý (tương thích cả manager_id/supervisorid) */
     public List<RequestForLeave> recentOfSubordinates(int managerEid, int limit) {
         List<RequestForLeave> list = new ArrayList<>();
         String sql = """
@@ -140,6 +138,57 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         return list;
     }
 
+    /** Top N đơn cấp dưới: nhận UID quản lý, tự map → EID, tương thích dữ liệu cũ (created_by=UID) */
+    public List<RequestForLeave> recentOfSubordinatesByUid(int managerUid, int limit) {
+        List<RequestForLeave> list = new ArrayList<>();
+        String sql = """
+            WITH mgr AS (
+                SELECT TOP 1 en.eid AS manager_eid
+                FROM Enrollment en
+                WHERE en.uid = ? AND en.active = 1
+            ),
+            S AS (
+                -- created_by = EID (đúng schema)
+                SELECT r.rid, r.title, r.reason, r.[from], r.[to],
+                       r.created_time, r.status,
+                       e.eid AS created_id, e.ename AS created_name,
+                       COALESCE(e.dept_id, e.did) AS dept_id,
+                       d.dept_name,
+                       COALESCE(e.manager_id, e.supervisorid) AS manager_eid
+                FROM RequestForLeave r
+                JOIN Employee e ON e.eid = r.created_by
+                LEFT JOIN Department d ON d.dept_id = COALESCE(e.dept_id, e.did)
+
+                UNION ALL
+
+                -- created_by = UID (dữ liệu cũ) → quy chiếu qua Enrollment
+                SELECT r.rid, r.title, r.reason, r.[from], r.[to],
+                       r.created_time, r.status,
+                       e2.eid AS created_id, e2.ename AS created_name,
+                       COALESCE(e2.dept_id, e2.did) AS dept_id,
+                       d2.dept_name,
+                       COALESCE(e2.manager_id, e2.supervisorid) AS manager_eid
+                FROM RequestForLeave r
+                JOIN Enrollment en2 ON en2.uid = r.created_by AND en2.active = 1
+                JOIN Employee   e2  ON e2.eid = en2.eid
+                LEFT JOIN Department d2 ON d2.dept_id = COALESCE(e2.dept_id, e2.did)
+            )
+            SELECT TOP (?) rid, title, reason, [from], [to], created_time, status,
+                           created_id, created_name, dept_id, dept_name
+            FROM S
+            WHERE manager_eid = (SELECT manager_eid FROM mgr)
+            ORDER BY created_time DESC
+        """;
+        try (PreparedStatement stm = connection.prepareStatement(sql)) {
+            stm.setInt(1, managerUid);
+            stm.setInt(2, limit);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) list.add(mapRow(rs));
+        } catch (SQLException ex) { ex.printStackTrace(); }
+        finally { closeConnection(); }
+        return list;
+    }
+
     /** Tìm kiếm đơn của chính nhân viên */
     public List<RequestForLeave> searchOfEmployee(int eid, String q, int limit) {
         List<RequestForLeave> list = new ArrayList<>();
@@ -154,11 +203,11 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
             LEFT JOIN Department d ON d.dept_id = COALESCE(e.dept_id, e.did)
             WHERE r.created_by = ?
               AND (
-                    r.title  LIKE ? OR
-                    r.reason LIKE ? OR
-                    CONVERT(varchar(10), r.[from], 120) LIKE ? OR
-                    CONVERT(varchar(10), r.[to],   120) LIKE ?
-                  )
+                   r.title  LIKE ? OR
+                   r.reason LIKE ? OR
+                   CONVERT(varchar(10), r.[from], 120) LIKE ? OR
+                   CONVERT(varchar(10), r.[to],   120) LIKE ?
+              )
             ORDER BY r.created_time DESC
         """;
         try (PreparedStatement stm = connection.prepareStatement(sql)) {
@@ -176,15 +225,12 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         return list;
     }
 
-    /** Chủ đơn xóa khi đang In Progress */
+    /** Chỉ chủ đơn (UID) và status=0 mới được xoá */
     public boolean deleteByOwnerIfInProgress(int rid, int uid) {
         String sql = """
             DELETE FROM RequestForLeave
             WHERE rid = ? AND status = 0
-              AND created_by = (
-                SELECT en.eid FROM Enrollment en
-                WHERE en.uid = ? AND en.active = 1
-              )
+              AND created_by = (SELECT en.eid FROM Enrollment en WHERE en.uid = ? AND en.active = 1)
         """;
         try (PreparedStatement stm = connection.prepareStatement(sql)) {
             stm.setInt(1, rid);
@@ -204,10 +250,7 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
             FROM RequestForLeave r
             JOIN Employee e ON e.eid = r.created_by
             WHERE r.rid = ?
-              AND (
-                    r.created_by = ? OR
-                    COALESCE(e.manager_id, e.supervisorid) = ?
-                  )
+              AND ( r.created_by = ? OR COALESCE(e.manager_id, e.supervisorid) = ? )
         """;
         try (PreparedStatement stm = connection.prepareStatement(sql)) {
             stm.setInt(1, rid);
@@ -220,7 +263,7 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         return false;
     }
 
-    /* ====== Not used/required ====== */
+    /* not used */
     @Override public ArrayList<RequestForLeave> list() { throw new UnsupportedOperationException(); }
     @Override public void insert(RequestForLeave model) { throw new UnsupportedOperationException(); }
     @Override public void update(RequestForLeave model) { throw new UnsupportedOperationException(); }
