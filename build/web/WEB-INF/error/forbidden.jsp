@@ -1,16 +1,15 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%
-  String ctx = request.getContextPath();
+  String _ctx = request.getContextPath();
   String msg = (String) request.getAttribute("forbidden_message");
   if (msg == null) msg = "Bạn không có quyền truy cập chức năng này.";
   String back = (String) request.getAttribute("backUrl");
-  if (back == null) back = ctx + "/home";
+  if (back == null) back = _ctx + "/home";
 %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <title>Không có quyền truy cập</title>
+  <meta charset="UTF-8"><title>Không có quyền truy cập</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root{--bg:#f7f9fc;--card:#fff;--border:#e5e7eb;--muted:#6b7280;--primary:#1a73e8}

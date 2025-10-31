@@ -16,13 +16,14 @@
   List<RequestForLeave> recentSubs = (List<RequestForLeave>) request.getAttribute("recentSubs");
   if (recentSubs == null) recentSubs = (List<RequestForLeave>) request.getAttribute("subs");
 
-  // status label
+  // status label (THÊM case 3: Cancelled)
   java.util.function.Function<Integer,String> statusText = (s) -> {
     if (s == null) return "Unknown";
     switch (s.intValue()) {
       case 0: return "In Progress";
       case 1: return "Approved";
       case 2: return "Rejected";
+      case 3: return "Cancelled";
       default: return "Unknown";
     }
   };
@@ -89,6 +90,8 @@
   }
   .chip.approved{border-color:var(--ok-br); background:var(--ok-bg); color:var(--ok-ink)}
   .chip.rejected{border-color:var(--no-br); background:var(--no-bg); color:var(--no-ink)}
+  /* THÊM style cho Cancelled */
+  .chip.cancelled{border-color:#e5e7eb; background:#f3f4f6; color:#374151}
 
   .right{display:flex; align-items:center; gap:10px}
   .more-btn{
@@ -133,7 +136,8 @@
   <!-- Search -->
   <div class="search-wrap">
     <form action="<%=ctx%>/request/my" method="get" class="search">
-      <input name="q" placeholder="Tìm kiếm đơn (tiêu đề, lý do, ngày)..." value="<%= request.getParameter("q")==null? "" : request.getParameter("q") %>">
+      <!-- đổi placeholder: chỉ theo Title -->
+      <input name="q" placeholder="Tìm theo tiêu đề (title)..." value="<%= request.getParameter("q")==null? "" : request.getParameter("q") %>">
       <button class="icon-btn" type="submit" title="Tìm kiếm">🔎</button>
     </form>
   </div>
@@ -149,7 +153,10 @@
            for (RequestForLeave r : recentMine) {
              String t = (r.getTitle()!=null && !r.getTitle().isBlank()) ? r.getTitle() : ("Nghỉ " + r.getFrom() + " – " + r.getTo());
              int st = r.getStatus();
-             String chipCls = "chip"; if (st==1) chipCls+=" approved"; else if (st==2) chipCls+=" rejected";
+             String chipCls = "chip";
+             if (st==1) chipCls+=" approved";
+             else if (st==2) chipCls+=" rejected";
+             else if (st==3) chipCls+=" cancelled";  // NEW
       %>
       <div class="row">
         <div>
@@ -185,7 +192,10 @@
                String t = (r.getTitle()!=null && !r.getTitle().isBlank()) ? r.getTitle() : ("Nghỉ " + r.getFrom() + " – " + r.getTo());
                String createdName = (r.getCreated_by()!=null && r.getCreated_by().getName()!=null) ? r.getCreated_by().getName() : "Nhân viên";
                int st = r.getStatus();
-               String chipCls = "chip"; if (st==1) chipCls+=" approved"; else if (st==2) chipCls+=" rejected";
+               String chipCls = "chip";
+               if (st==1) chipCls+=" approved";
+               else if (st==2) chipCls+=" rejected";
+               else if (st==3) chipCls+=" cancelled";  // NEW
         %>
         <div class="row">
           <div>

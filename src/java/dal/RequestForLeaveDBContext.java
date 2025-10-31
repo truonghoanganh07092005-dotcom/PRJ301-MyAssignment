@@ -288,4 +288,8 @@ public boolean cancelByOwnerIfInProgress(int rid, int uid) {
     @Override public void insert(RequestForLeave model) { throw new UnsupportedOperationException(); }
     @Override public void update(RequestForLeave model) { throw new UnsupportedOperationException(); }
     @Override public void delete(RequestForLeave model) { throw new UnsupportedOperationException(); }
+
+    public boolean updateByOwnerIfInProgress(int rid, int id, String title, Date valueOf, Date valueOf0, String reason) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
 }

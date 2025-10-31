@@ -1,29 +1,27 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%
-  // --- Khai báo 1 lần các biến dùng trong navbar ---
-  String ctx = (String) request.getAttribute("_ctx");
-  if (ctx == null) ctx = request.getContextPath();
+  // dùng tên biến khác để không đụng: _ctxNav
+  String _ctxNav = (String) request.getAttribute("_ctx");
+  if (_ctxNav == null || _ctxNav.isBlank()) _ctxNav = request.getContextPath();
 
-  String uri = request.getRequestURI();
+  String _uri = request.getRequestURI();
 
-  String displayName = (String) request.getAttribute("_displayName");
-  if (displayName == null || displayName.isBlank()) {
-      displayName = (String) session.getAttribute("displayName");
-      if (displayName == null || displayName.isBlank()) displayName = "User";
+  String _displayName = (String) request.getAttribute("_displayName");
+  if (_displayName == null || _displayName.isBlank()) {
+      _displayName = (String) session.getAttribute("displayName");
+      if (_displayName == null || _displayName.isBlank()) _displayName = "User";
   }
 
-  Boolean canReview = (Boolean) request.getAttribute("_canReview");
-  if (canReview == null) canReview = (Boolean) session.getAttribute("canReview");
-  if (canReview == null) canReview = false;
+  Boolean _canReview = (Boolean) request.getAttribute("_canReview");
+  if (_canReview == null) _canReview = (Boolean) session.getAttribute("canReview");
+  if (_canReview == null) _canReview = false;
 
-  // --- Biến final để dùng trong lambda (tránh lỗi effectively final) ---
-  final String BASE = ctx;
-  final String CURR_URI = uri;
+  final String BASE = _ctxNav;
+  final String CURR_URI = _uri;
 
   java.util.function.Function<String,String> active =
       p -> (CURR_URI.startsWith(BASE + p) ? "active" : "");
 %>
-
 <style>
   .navbar{background:#0f1625;color:#fff;padding:10px 18px;display:flex;align-items:center;gap:18px}
   .navbar a{color:#c7d2fe;text-decoration:none;padding:6px 10px;border-radius:10px}
@@ -41,26 +39,25 @@
 </style>
 
 <div class="navbar">
-  <a class="<%=active.apply("/home")%>"            href="<%=ctx%>/home">🏠 Trang chủ</a>
-  <a class="<%=active.apply("/request/create")%>" href="<%=ctx%>/request/create">➕ Tạo đơn</a>
-  <a class="<%=active.apply("/request/my")%>"     href="<%=ctx%>/request/my">🗂️ Đơn của tôi</a>
-  <% if (canReview) { %>
-    <a class="<%=active.apply("/request/review")%>" href="<%=ctx%>/request/review">👥 Duyệt đơn</a>
+  <a class="<%=active.apply("/home")%>"            href="<%=_ctxNav%>/home">🏠 Trang chủ</a>
+  <a class="<%=active.apply("/request/create")%>" href="<%=_ctxNav%>/request/create">➕ Tạo đơn</a>
+  <a class="<%=active.apply("/request/my")%>"     href="<%=_ctxNav%>/request/my">🗂️ Đơn của tôi</a>
+  <% if (_canReview) { %>
+    <a class="<%=active.apply("/request/review")%>" href="<%=_ctxNav%>/request/review">👥 Duyệt đơn</a>
   <% } %>
-  <a class="<%=active.apply("/agenda")%>"         href="<%=ctx%>/agenda">📅 Agenda</a>
+  <a class="<%=active.apply("/agenda")%>"         href="<%=_ctxNav%>/agenda">📅 Agenda</a>
 
   <div class="nav-right">
-    <a class="<%=active.apply("/search")%>"  href="<%=ctx%>/search"  title="Tìm kiếm">➤</a>
-    <a class="<%=active.apply("/notify")%>"  href="<%=ctx%>/notify"  title="Thông báo">🔔</a>
+    <a class="<%=active.apply("/search")%>"  href="<%=_ctxNav%>/search"  title="Tìm kiếm">➤</a>
+    <a class="<%=active.apply("/notify")%>"  href="<%=_ctxNav%>/notify"  title="Thông báo">🔔</a>
 
-    <!-- Avatar + menu -->
     <div class="dropdown" id="userDrop">
-      <div class="avatar" id="btnAvatar"><%= displayName.substring(0,1).toUpperCase() %></div>
+      <div class="avatar" id="btnAvatar"><%= _displayName.substring(0,1).toUpperCase() %></div>
       <div class="dropdown-panel" id="panelAvatar">
-        <div class="head">Xin chào, <b style="color:#2563eb"><%=displayName%></b></div>
-        <a href="<%=ctx%>/profile">Thông tin cá nhân</a>
-        <a href="<%=ctx%>/request/my">Đơn của tôi</a>
-        <a href="<%=ctx%>/logout">Đăng xuất</a>
+        <div class="head">Xin chào, <b style="color:#2563eb"><%=_displayName%></b></div>
+        <a href="<%=_ctxNav%>/profile">Thông tin cá nhân</a>
+        <a href="<%=_ctxNav%>/request/my">Đơn của tôi</a>
+        <a href="<%=_ctxNav%>/logout">Đăng xuất</a>
       </div>
     </div>
   </div>
@@ -70,8 +67,7 @@
   (function(){
     const btn = document.getElementById('btnAvatar');
     const panel = document.getElementById('panelAvatar');
-    const drop = document.getElementById('userDrop');
-    btn.addEventListener('click', (e)=>{
+    btn?.addEventListener('click', (e)=>{
       panel.style.display = (panel.style.display==='block') ? 'none' : 'block';
       e.stopPropagation();
     });
