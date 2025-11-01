@@ -289,7 +289,71 @@ public boolean cancelByOwnerIfInProgress(int rid, int uid) {
     @Override public void update(RequestForLeave model) { throw new UnsupportedOperationException(); }
     @Override public void delete(RequestForLeave model) { throw new UnsupportedOperationException(); }
 
-    public boolean updateByOwnerIfInProgress(int rid, int id, String title, Date valueOf, Date valueOf0, String reason) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-    }
+  public List<RequestForLeave> listMineByTitle(Integer eid, String q, int limit) {
+    List<RequestForLeave> list = new ArrayList<>();
+    String sql = """
+        SELECT TOP (?) r.rid, r.title, r.reason, r.[from], r.[to],
+                       r.created_time, r.status,
+                       e.eid AS created_id, e.ename AS created_name,
+                       COALESCE(e.dept_id, e.did) AS dept_id,
+                       d.dept_name
+        FROM RequestForLeave r
+        JOIN Employee e ON e.eid = r.created_by
+        LEFT JOIN Department d ON d.dept_id = COALESCE(e.dept_id, e.did)
+        WHERE r.created_by = ? AND r.title LIKE ?
+        ORDER BY r.created_time DESC
+    """;
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setInt(1, limit);
+        stm.setInt(2, eid);
+        stm.setString(3, "%" + (q == null ? "" : q.trim()) + "%");
+        ResultSet rs = stm.executeQuery();
+        while (rs.next()) list.add(mapRow(rs));
+    } catch (SQLException ex) { ex.printStackTrace(); }
+    finally { closeConnection(); }
+    return list;
+}
+
+/** Chủ đơn sửa khi đang In Progress (status=0) */
+public boolean updateByOwnerIfInProgress(int rid, int uid, String title,
+                                         java.sql.Date from, java.sql.Date to, String reason) {
+    String sql = """
+        UPDATE r
+           SET r.title = ?, r.[from] = ?, r.[to] = ?, r.reason = ?
+        FROM RequestForLeave r
+        JOIN Enrollment en ON en.eid = r.created_by AND en.active = 1
+        WHERE r.rid = ? AND en.uid = ? AND r.status = 0
+    """;
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setString(1, title);
+        stm.setDate(2, from);
+        stm.setDate(3, to);
+        stm.setString(4, reason);
+        stm.setInt(5, rid);
+        stm.setInt(6, uid);
+        return stm.executeUpdate() > 0;
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+        return false;
+    } finally { closeConnection(); }
+}
+
+/** Chủ đơn khôi phục khi đang Cancelled (status=3) -> set về 0 */
+public boolean uncancelByOwnerIfCancelled(int rid, int uid) {
+    String sql = """
+        UPDATE r
+           SET r.status = 0
+        FROM RequestForLeave r
+        JOIN Enrollment en ON en.eid = r.created_by AND en.active = 1
+        WHERE r.rid = ? AND en.uid = ? AND r.status = 3
+    """;
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setInt(1, rid);
+        stm.setInt(2, uid);
+        return stm.executeUpdate() > 0;
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+        return false;
+    } finally { closeConnection(); }
+}
 }

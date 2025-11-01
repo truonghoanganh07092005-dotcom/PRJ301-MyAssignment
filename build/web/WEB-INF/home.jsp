@@ -16,14 +16,14 @@
   List<RequestForLeave> recentSubs = (List<RequestForLeave>) request.getAttribute("recentSubs");
   if (recentSubs == null) recentSubs = (List<RequestForLeave>) request.getAttribute("subs");
 
-  // status label (THÊM case 3: Cancelled)
+  // status label
   java.util.function.Function<Integer,String> statusText = (s) -> {
     if (s == null) return "Unknown";
     switch (s.intValue()) {
       case 0: return "In Progress";
       case 1: return "Approved";
       case 2: return "Rejected";
-      case 3: return "Cancelled";
+      case 3: return "Cancelled";   // <-- đã bổ sung
       default: return "Unknown";
     }
   };
@@ -40,12 +40,12 @@
     --chip:#fff7ed; --chip-b:#fed7aa; --chip-c:#9a3412;
     --ok:#16a34a; --ok-bg:#f0fdf4; --ok-br:#bbf7d0; --ok-ink:#065f46;
     --no:#ef4444; --no-bg:#fef2f2; --no-br:#fecaca; --no-ink:#991b1b;
+    --cancel:#64748b; --cancel-bg:#f1f5f9; --cancel-br:#e2e8f0; --cancel-ink:#334155;
     --primary:#2563eb;
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:linear-gradient(180deg,#f3f6ff 0%,#f7f8fc 60%); color:var(--ink); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 
-  /* Header strip (navbar đã include) */
   .page{max-width:1120px;margin:0 auto;padding:18px 18px 64px}
   h1{font-size:34px;letter-spacing:.2px;margin:12px 0 18px}
   h2{font-size:22px;margin:26px 0 12px}
@@ -90,8 +90,7 @@
   }
   .chip.approved{border-color:var(--ok-br); background:var(--ok-bg); color:var(--ok-ink)}
   .chip.rejected{border-color:var(--no-br); background:var(--no-bg); color:var(--no-ink)}
-  /* THÊM style cho Cancelled */
-  .chip.cancelled{border-color:#e5e7eb; background:#f3f4f6; color:#374151}
+  .chip.cancelled{border-color:var(--cancel-br); background:var(--cancel-bg); color:var(--cancel-ink)}
 
   .right{display:flex; align-items:center; gap:10px}
   .more-btn{
@@ -101,7 +100,7 @@
   .more-btn:hover{box-shadow:0 4px 16px rgba(16,24,40,.08)}
   .more-btn:active{transform:scale(.98)}
 
-  /* Floating context menu: mount to body so it never pushes layout */
+  /* Floating context menu */
   .fly{
     position:fixed; z-index:10000; min-width:220px; background:#fff;
     border:1px solid var(--border); border-radius:14px;
@@ -116,7 +115,7 @@
   .fly a:hover, .fly button:hover{background:#f8fafc}
   .danger{color:#c1121f}
 
-  /* Quick actions */
+  .section{margin-top:22px}
   .actions{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr)); gap:14px}
   .act{
     padding:16px; border-radius:14px; border:1px solid var(--border); background:#fff;
@@ -133,16 +132,15 @@
 <jsp:include page="/WEB-INF/partials/navbar.jsp"/>
 
 <div class="page">
-  <!-- Search -->
+  <!-- ô search: đưa tới /request/my để tìm theo TITLE -->
   <div class="search-wrap">
     <form action="<%=ctx%>/request/my" method="get" class="search">
-      <!-- đổi placeholder: chỉ theo Title -->
       <input name="q" placeholder="Tìm theo tiêu đề (title)..." value="<%= request.getParameter("q")==null? "" : request.getParameter("q") %>">
       <button class="icon-btn" type="submit" title="Tìm kiếm">🔎</button>
     </form>
   </div>
 
-  <!-- ĐƠN CỦA TÔI -->
+  <!-- ĐƠN CỦA TÔI (recent) -->
   <h1>Đơn gần đây</h1>
   <div class="card">
     <h3>Các đơn của <b>bạn</b> thao tác gần đây (tối đa 5 đơn)</h3>
@@ -156,7 +154,7 @@
              String chipCls = "chip";
              if (st==1) chipCls+=" approved";
              else if (st==2) chipCls+=" rejected";
-             else if (st==3) chipCls+=" cancelled";  // NEW
+             else if (st==3) chipCls+=" cancelled";
       %>
       <div class="row">
         <div>
@@ -165,13 +163,19 @@
         </div>
         <div class="right">
           <span class="<%= chipCls %>"><%= statusText.apply(st) %></span>
+          <!-- MENU: sửa/hủy/xóa khi In Progress; khôi phục khi Cancelled -->
           <button class="more-btn"
                   aria-haspopup="menu"
                   data-menu='
                     <a href="<%=ctx%>/request/detail?rid=<%=r.getRid()%>">Xem chi tiết</a>
                     <a href="<%=ctx%>/request/print?rid=<%=r.getRid()%>">In / xuất PDF</a>
-                    <a href="<%=ctx%>/request/cancel?rid=<%=r.getRid()%>">Hủy đơn</a>
-                    <a class="danger" href="<%=ctx%>/request/delete?rid=<%=r.getRid()%>">Xóa đơn</a>
+                    <% if (st==0) { %>
+                      <a href="<%=ctx%>/request/edit?rid=<%=r.getRid()%>">Sửa đơn</a>
+                      <a href="<%=ctx%>/request/cancel?rid=<%=r.getRid()%>">Hủy đơn</a>
+                      <a class="danger" href="<%=ctx%>/request/delete?rid=<%=r.getRid()%>">Xóa đơn</a>
+                    <% } else if (st==3) { %>
+                      <a href="<%=ctx%>/request/uncancel?rid=<%=r.getRid()%>">Khôi phục hủy</a>
+                    <% } %>
                   '>⋯</button>
         </div>
       </div>
@@ -195,7 +199,7 @@
                String chipCls = "chip";
                if (st==1) chipCls+=" approved";
                else if (st==2) chipCls+=" rejected";
-               else if (st==3) chipCls+=" cancelled";  // NEW
+               else if (st==3) chipCls+=" cancelled";
         %>
         <div class="row">
           <div>
@@ -208,8 +212,11 @@
                     aria-haspopup="menu"
                     data-menu='
                       <a href="<%=ctx%>/request/detail?rid=<%=r.getRid()%>">Xem chi tiết</a>
-                      <a href="<%=ctx%>/request/approve?rid=<%=r.getRid()%>">Duyệt</a>
-                      <a class="danger" href="<%=ctx%>/request/reject?rid=<%=r.getRid()%>">Từ chối</a>
+                      <a href="<%=ctx%>/request/print?rid=<%=r.getRid()%>">In / xuất PDF</a>
+                      <% if (canReview) { %>
+                        <a href="<%=ctx%>/request/approve?rid=<%=r.getRid()%>">Duyệt</a>
+                        <a class="danger" href="<%=ctx%>/request/reject?rid=<%=r.getRid()%>">Từ chối</a>
+                      <% } %>
                     '>⋯</button>
           </div>
         </div>
@@ -244,7 +251,6 @@
   function positionMenu(btn){
     const r = btn.getBoundingClientRect();
     const gap = 10;
-    // đo trước để tránh tràn cạnh phải
     menu.style.display = 'block';
     const mw = Math.max(220, menu.offsetWidth || 220);
     const mh = Math.max(10,  menu.offsetHeight || 10);
@@ -257,7 +263,6 @@
   }
 
   function openMenu(btn){
-    // nội dung menu theo từng item
     menu.innerHTML = btn.getAttribute('data-menu');
     positionMenu(btn);
     menu.setAttribute('aria-hidden', 'false');
@@ -270,7 +275,6 @@
     openedBy = null;
   }
 
-  // Toggle khi nhấn “...”
   document.addEventListener('click', (e)=>{
     const b = e.target.closest('.more-btn');
     if (b){
@@ -281,7 +285,6 @@
     }
     if (!e.target.closest('#ctxMenu')) closeMenu();
   });
-  // ESC, scroll, resize -> đóng
   document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeMenu(); });
   window.addEventListener('scroll', closeMenu, {passive:true});
   window.addEventListener('resize', closeMenu);

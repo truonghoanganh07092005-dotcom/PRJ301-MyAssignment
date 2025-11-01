@@ -17,14 +17,22 @@ public class MyListController extends BaseRequiredAuthenticationController {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
 
-        String q = req.getParameter("q");
-        int eid = user.getEmployee()!=null ? user.getEmployee().getId() : -1;
+        // Bắt buộc phải có EID để lấy "đơn của tôi"
+        Integer eid = (user.getEmployee() != null) ? user.getEmployee().getId() : null;
+        if (eid == null) {
+            resp.sendRedirect(req.getContextPath() + "/login?timeout=1");
+            return;
+        }
 
+        String q = req.getParameter("q");
+        RequestForLeaveDBContext db = new RequestForLeaveDBContext();
         List<RequestForLeave> list;
+
+        // Chỉ search theo TITLE
         if (q != null && !q.trim().isEmpty()) {
-            list = new RequestForLeaveDBContext().searchOfEmployee(eid, q.trim(), 50);
+            list = db.listMineByTitle(eid, q.trim(), 50);   // <-- đúng chữ ký: (Integer, String, int)
         } else {
-            list = new RequestForLeaveDBContext().recentOfEmployee(eid, 50);
+            list = db.recentOfEmployee(eid, 50);
         }
 
         // flash từ session
