@@ -10,22 +10,18 @@ import model.iam.User;
 
 @WebServlet(urlPatterns = "/request/unapprove")
 public class UnapproveController extends BaseRequiredAuthorizationController {
-
     @Override
     protected void processGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        String ridStr = req.getParameter("rid");
-        HttpSession s = req.getSession();
         String ctx = req.getContextPath();
+        HttpSession s = req.getSession();
         try {
-            int rid = Integer.parseInt(ridStr);
-            boolean ok = new RequestForLeaveDBContext()
-                    .unapproveByManagerWithin24h(rid, user.getId());
-            s.setAttribute("flash",
-                ok ? ("Đã HỦY DUYỆT đơn #" + rid + " (trong 24h).")
-                   : ("Không thể hủy duyệt đơn #" + rid + 
-                      " (chỉ cho trạng thái Approved trong vòng 24h & là quản lý trực tiếp)."));
-        } catch (Exception ex) {
+            int rid = Integer.parseInt(req.getParameter("rid"));
+            boolean ok = new RequestForLeaveDBContext().unapproveWithin24h(rid, user.getId());
+            s.setAttribute("flash", ok
+                    ? "Đã hủy duyệt/từ chối, đơn quay về In-Progress."
+                    : "Không thể hủy (chỉ trong 24h và đúng người đã xử lý).");
+        } catch (Exception e) {
             s.setAttribute("flash", "Tham số không hợp lệ.");
         }
         String back = req.getHeader("Referer");
@@ -34,7 +30,5 @@ public class UnapproveController extends BaseRequiredAuthorizationController {
 
     @Override
     protected void processPost(HttpServletRequest req, HttpServletResponse resp, User user)
-            throws ServletException, IOException {
-        processGet(req, resp, user);
-    }
+            throws ServletException, IOException { processGet(req, resp, user); }
 }

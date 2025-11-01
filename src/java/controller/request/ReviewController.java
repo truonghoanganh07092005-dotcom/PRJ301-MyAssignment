@@ -1,30 +1,30 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package controller.request;
 
-import controller.iam.BaseRequiredAuthorizationController;
+import controller.iam.BaseRequiredAuthenticationController;
+import dal.RequestForLeaveDBContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.util.List;
+import model.RequestForLeave;
 import model.iam.User;
 
-/**
- *
- * @author sonnt
- */
-@WebServlet(urlPatterns = "/request/review")
-public class ReviewController extends BaseRequiredAuthorizationController {
-
+@WebServlet("/request/review")
+public class ReviewController extends BaseRequiredAuthenticationController {
     @Override
-    protected void processPost(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
+            throws ServletException, IOException {
+
+        List<RequestForLeave> waiting = new RequestForLeaveDBContext()
+                .recentOfSubordinatesByUid(user.getId(), 20);
+
+        req.setAttribute("waiting", waiting);
+        req.getRequestDispatcher("/WEB-INF/request/review.jsp").forward(req, resp);
     }
 
     @Override
-    protected void processGet(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
-    
 }

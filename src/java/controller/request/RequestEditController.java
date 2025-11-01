@@ -27,7 +27,7 @@ public class RequestEditController extends BaseRequiredAuthenticationController 
             req.setAttribute("form_from",   r.getFrom()==null? "" : r.getFrom().toString());
             req.setAttribute("form_to",     r.getTo()==null? ""   : r.getTo().toString());
             req.setAttribute("form_reason", r.getReason());
-          req.getRequestDispatcher("/WEB-INF/request/edit.jsp").forward(req, resp);
+            req.getRequestDispatcher("/WEB-INF/request/edit.jsp").forward(req, resp);
         } catch (Exception e) {
             resp.sendRedirect(req.getContextPath() + "/request/my");
         }
@@ -48,7 +48,7 @@ public class RequestEditController extends BaseRequiredAuthenticationController 
             boolean ok = new RequestForLeaveDBContext()
                     .updateByOwnerIfInProgress(rid, user.getId(), title, from, to, reason);
 
-            s.setAttribute("flash", ok ? "Đã lưu thay đổi đơn." : "Không thể sửa (chỉ sửa khi In Progress).");
+            s.setAttribute("flash", ok ? "Đã lưu thay đổi đơn." : "Không thể sửa (chỉ khi In-Progress).");
         } catch (Exception ex) {
             s.setAttribute("flash", "Dữ liệu không hợp lệ.");
         }

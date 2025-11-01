@@ -135,25 +135,26 @@ private boolean isBlank(String s) {
     return s == null || s.trim().isEmpty();
 }
 
-    private boolean hasReviewRight(User u) {
-        try {
-            if (u.getRoles() == null) return false;
-            for (Role r : u.getRoles()) {
-                if (r.getFeatures() == null) continue;
-                for (Feature f : r.getFeatures()) {
-                    String url = f.getUrl();
-                    if (url == null) continue;
-                    url = url.trim().toLowerCase();
-                    if (url.startsWith("/request/review") ||
-                        url.startsWith("/request/approve") ||
-                        url.startsWith("/request/reject")) {
-                        return true;
-                    }
-                }
+  private boolean hasReviewRight(User u) {
+    try {
+        if (u.getRoles() == null) return false;
+        for (Role r : u.getRoles()) {
+            if (r.getFeatures() == null) continue;
+            for (Feature f : r.getFeatures()) {
+                String url = f.getUrl();
+                if (url == null) continue;
+                url = url.trim().toLowerCase();
+                if (url.startsWith("/request/review")
+                    || url.startsWith("/request/approve")
+                    || url.startsWith("/request/reject")
+                    || url.equals("/request/")               // ✅ thêm dòng này
+                    || url.startsWith("/request/unapprove")) // để hiện menu hủy duyệt
+                    return true;
             }
-        } catch (Exception ignore) {}
-        return false;
-    }
+        }
+    } catch (Exception ignore) {}
+    return false;
+}
 
     private boolean notBlank(String s) {
         return s != null && !s.trim().isEmpty();
