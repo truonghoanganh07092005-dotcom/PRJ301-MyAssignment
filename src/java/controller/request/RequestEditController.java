@@ -27,7 +27,7 @@ public class RequestEditController extends BaseRequiredAuthenticationController 
             req.setAttribute("form_from",   r.getFrom()==null? "" : r.getFrom().toString());
             req.setAttribute("form_to",     r.getTo()==null? ""   : r.getTo().toString());
             req.setAttribute("form_reason", r.getReason());
-            req.getRequestDispatcher("/WEB-INF/request/create.jsp").forward(req, resp);
+          req.getRequestDispatcher("/WEB-INF/request/edit.jsp").forward(req, resp);
         } catch (Exception e) {
             resp.sendRedirect(req.getContextPath() + "/request/my");
         }

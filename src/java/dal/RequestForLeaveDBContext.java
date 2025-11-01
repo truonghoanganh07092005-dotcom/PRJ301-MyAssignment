@@ -283,6 +283,7 @@ public boolean cancelByOwnerIfInProgress(int rid, int uid) {
     }
 }
 
+
     /* not used */
     @Override public ArrayList<RequestForLeave> list() { throw new UnsupportedOperationException(); }
     @Override public void insert(RequestForLeave model) { throw new UnsupportedOperationException(); }
@@ -356,4 +357,69 @@ public boolean uncancelByOwnerIfCancelled(int rid, int uid) {
         return false;
     } finally { closeConnection(); }
 }
+public boolean approveByManagerIfInProgress(int rid, int managerUid) {
+    String sql = """
+        UPDATE r
+           SET r.status = 1,
+               r.processed_by   = en.eid,
+               r.processed_time = GETDATE()
+        FROM RequestForLeave r
+        JOIN Employee e ON e.eid = r.created_by
+        JOIN Enrollment en ON en.uid = ? AND en.active = 1
+        WHERE r.rid = ?
+          AND r.status = 0
+          AND COALESCE(e.manager_id, e.supervisorid) = en.eid
+    """;
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setInt(1, managerUid);
+        stm.setInt(2, rid);
+        return stm.executeUpdate() > 0;
+    } catch (SQLException ex) { ex.printStackTrace(); return false; }
+    finally { closeConnection(); }
+}
+
+// === REJECT ===
+public boolean rejectByManagerIfInProgress(int rid, int managerUid) {
+    String sql = """
+        UPDATE r
+           SET r.status = 2,
+               r.processed_by   = en.eid,
+               r.processed_time = GETDATE()
+        FROM RequestForLeave r
+        JOIN Employee e ON e.eid = r.created_by
+        JOIN Enrollment en ON en.uid = ? AND en.active = 1
+        WHERE r.rid = ?
+          AND r.status = 0
+          AND COALESCE(e.manager_id, e.supervisorid) = en.eid
+    """;
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setInt(1, managerUid);
+        stm.setInt(2, rid);
+        return stm.executeUpdate() > 0;
+    } catch (SQLException ex) { ex.printStackTrace(); return false; }
+    finally { closeConnection(); }
+}
+
+// === UNAPPROVE (HỦY DUYỆT/TỪ CHỐI) TRONG 24H ===
+public boolean unapproveWithin24h(int rid, int managerUid) {
+    String sql = """
+        UPDATE r
+           SET r.status = 0,
+               r.processed_by   = NULL,
+               r.processed_time = NULL
+        FROM RequestForLeave r
+        JOIN Enrollment en ON en.uid = ? AND en.active = 1
+        WHERE r.rid = ?
+          AND r.status IN (1,2)           -- đã duyệt hoặc đã từ chối
+          AND r.processed_by = en.eid     -- chính người xử lý
+          AND DATEDIFF(HOUR, r.processed_time, GETDATE()) <= 24
+    """;
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setInt(1, managerUid);
+        stm.setInt(2, rid);
+        return stm.executeUpdate() > 0;
+    } catch (SQLException ex) { ex.printStackTrace(); return false; }
+    finally { closeConnection(); }
+}
+
 }

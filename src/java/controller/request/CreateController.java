@@ -15,6 +15,8 @@ public class CreateController extends BaseRequiredAuthenticationController {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
+        // để JSP set min="today"
+        req.setAttribute("todayIso", java.time.LocalDate.now().toString());
         req.getRequestDispatcher("/WEB-INF/request/create.jsp").forward(req, resp);
     }
 
@@ -29,25 +31,46 @@ public class CreateController extends BaseRequiredAuthenticationController {
         String reason = trim(req.getParameter("reason"));
 
         java.util.List<String> errors = new java.util.ArrayList<>();
-        if (isBlank(fromS)) errors.add("Vui lòng chọn Từ ngày.");
-        if (isBlank(toS))   errors.add("Vui lòng chọn Đến ngày.");
-        if (isBlank(reason)) errors.add("Vui lòng nhập lý do.");
 
+        // parse ngày
         java.sql.Date from = null, to = null;
         try { from = java.sql.Date.valueOf(fromS); } catch (Exception e) { errors.add("Ngày bắt đầu không hợp lệ."); }
         try { to   = java.sql.Date.valueOf(toS);   } catch (Exception e) { errors.add("Ngày kết thúc không hợp lệ."); }
-        if (from != null && to != null && to.before(from)) errors.add("Đến ngày phải ≥ Từ ngày.");
+
+        // ---- Business rules ----
+        if (isBlank(reason)) errors.add("Vui lòng nhập lý do.");
+
+        // hôm nay (không kèm thời gian)
+        java.sql.Date today = java.sql.Date.valueOf(java.time.LocalDate.now());
+
+        if (from == null) {
+            errors.add("Vui lòng chọn Từ ngày.");
+        } else {
+            // KHÔNG cho xin nghỉ từ quá khứ
+            if (from.before(today)) {
+                errors.add("Từ ngày phải từ hôm nay trở đi (" + today + ").");
+            }
+        }
+
+        if (to == null) {
+            errors.add("Vui lòng chọn Đến ngày.");
+        } else if (from != null && to.before(from)) {
+            errors.add("Đến ngày phải ≥ Từ ngày.");
+        }
 
         if (!errors.isEmpty()) {
+            // trả form + lỗi
             req.setAttribute("errors", errors);
             req.setAttribute("form_title",  title);
             req.setAttribute("form_from",   fromS);
             req.setAttribute("form_to",     toS);
             req.setAttribute("form_reason", reason);
+            req.setAttribute("todayIso", today.toString());
             req.getRequestDispatcher("/WEB-INF/request/create.jsp").forward(req, resp);
             return;
         }
 
+        // insert
         RequestForLeave r = new RequestForLeave();
         r.setCreated_by(user.getEmployee()); // created_by = EID
         r.setFrom(from);
@@ -58,7 +81,7 @@ public class CreateController extends BaseRequiredAuthenticationController {
 
         int rid = new RequestForLeaveDBContext().insertReturningId(r);
 
-        // flash highlight ở trang /request/my
+        // flash highlight ở /request/my
         HttpSession s = req.getSession(false);
         if (s != null) s.setAttribute("flash", "Tạo đơn thành công (#" + rid + ").");
 
