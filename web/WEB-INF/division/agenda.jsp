@@ -1,127 +1,114 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ page import="java.util.*, model.RequestForLeave" %>
-
-<%-- ===== Helpers (must use JSP declaration <%! ... %>) ===== --%>
-<%!
-  String statusText(Integer s){
-    if (s == null) return "Unknown";
-    switch (s.intValue()){
-      case 1: return "Approved";
-      case 2: return "Rejected";
-      case 3: return "Cancelled";
-      default: return "In Progress";
-    }
-  }
-  String statusCls(Integer s){
-    if (s == null) return "chip";
-    switch (s.intValue()){
-      case 1: return "chip approved";
-      case 2: return "chip rejected";
-      case 3: return "chip cancelled";
-      default: return "chip";
-    }
-  }
-%>
-
+<%@ page import="java.util.*, java.time.*" %>
 <%
-  String ctx = request.getContextPath();
-  List<RequestForLeave> mine = (List<RequestForLeave>) request.getAttribute("mine");
-  List<RequestForLeave> subs = (List<RequestForLeave>) request.getAttribute("subs");
-%>
+    String fromIso = (String) request.getAttribute("fromIso");
+    String toIso   = (String) request.getAttribute("toIso");
 
+    // cols là List<LocalDate> (đúng kiểu controller gửi)
+    List<LocalDate> cols = (List<LocalDate>) request.getAttribute("cols");
+
+    // rows: List<Map<String,Object>> với "name" (String) và "cells" (List<Integer>)
+    List<Map<String,Object>> rows = (List<Map<String,Object>>) request.getAttribute("rows");
+
+    boolean hasData = cols != null && !cols.isEmpty() && rows != null && !rows.isEmpty();
+%>
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Agenda | Leave Management</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  :root{
-    --bg:#f6f7fb; --ink:#0f172a; --muted:#667085; --border:#e6e9f0; --card:#fff;
-    --chip:#fff7ed; --chip-b:#fed7aa; --chip-c:#9a3412;
-    --ok-bg:#f0fdf4; --ok-br:#bbf7d0; --ok-ink:#065f46;
-    --no-bg:#fef2f2; --no-br:#fecaca; --no-ink:#991b1b;
-    --ca-bg:#f1f5f9; --ca-br:#e2e8f0; --ca-ink:#0f172a;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:linear-gradient(180deg,#f3f6ff 0%,#f7f8fc 60%);color:var(--ink);
-       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-  .page{max-width:1120px;margin:0 auto;padding:18px}
-  h1{font-size:32px;margin:12px 0 18px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media(max-width:900px){.grid{grid-template-columns:1fr}}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:20px;
-        box-shadow:0 8px 28px rgba(16,24,40,.06);overflow:hidden}
-  .card h3{margin:0;padding:14px 16px;font-size:15px;color:var(--muted);
-           background:#f8fafc;border-bottom:1px dashed var(--border)}
-  .list .row{display:flex;justify-content:space-between;align-items:center;gap:12px;
-             padding:14px 16px;border-top:1px solid var(--border)}
-  .list .row:first-child{border-top:none}
-  .title{font-weight:800}
-  .meta{color:var(--muted);font-size:13px;margin-top:4px}
-  .chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:6px 12px;
-        border-radius:999px;border:1px solid var(--chip-b);background:var(--chip);color:var(--chip-c)}
-  .approved{border-color:var(--ok-br);background:var(--ok-bg);color:var(--ok-ink)}
-  .rejected{border-color:var(--no-br);background:var(--no-bg);color:var(--no-ink)}
-  .cancelled{border-color:var(--ca-br);background:var(--ca-bg);color:var(--ca-ink)}
-  .right{display:flex;gap:8px}
-  .btn{display:inline-block;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
-       text-decoration:none;color:var(--ink);background:#fff}
-</style>
+    <meta charset="UTF-8">
+    <title>Agenda (duyệt đơn nghỉ)</title>
+    <style>
+        :root {
+            --border: #e5e7eb;
+            --bg: #f8fafc;
+            --text: #111827;
+            --muted: #6b7280;
+            --work: #e8f5e9;   /* xanh: đi làm */
+            --leave: #ffebee;  /* đỏ nhạt: nghỉ */
+            --sticky: #fafafa;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, Arial, sans-serif; margin: 0; color: var(--text); background: #fff; }
+        .container { padding: 16px 20px; }
+        h1 { font-size: 24px; margin: 0 0 12px 0; }
+        .toolbar { margin: 12px 0 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .toolbar label { font-size: 14px; display: inline-flex; gap: 6px; align-items: center; }
+        input[type="date"]{ padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 8px; }
+        .btn { padding: 8px 14px; border-radius: 8px; border: 1px solid #111827; background: #111827; color: #fff; cursor: pointer; }
+
+        .legend { display:flex; gap:18px; align-items:center; margin: 6px 0 12px;}
+        .dot { width:14px; height:14px; border-radius:3px; display:inline-block; border:1px solid var(--border); }
+        .dot.work { background: var(--work); }
+        .dot.leave{ background: var(--leave); }
+
+        .table-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
+        table { border-collapse: collapse; width: 100%; min-width: 780px; }
+        thead th { position: sticky; top: 0; background: #fff; z-index: 2; }
+        th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: center; white-space: nowrap; }
+        th:first-child, td:first-child {
+            position: sticky; left: 0; z-index: 3;
+            background: var(--sticky); text-align: left; min-width: 180px; font-weight: 600;
+        }
+        td.work { background: var(--work); }
+        td.leave{ background: var(--leave); }
+        .empty { color: var(--muted); padding: 16px 0; }
+        .sub { font-size: 12px; color: var(--muted); }
+    </style>
 </head>
 <body>
-<jsp:include page="/WEB-INF/partials/navbar.jsp"/>
+<div class="container">
+    <h1>Agenda (duyệt đơn nghỉ)</h1>
 
-<div class="page">
-  <h1>Agenda</h1>
+    <form class="toolbar" method="get" action="<%=request.getContextPath()%>/agenda">
+        <label>Từ ngày:
+            <input type="date" name="from" value="<%= fromIso %>">
+        </label>
+        <label>Đến ngày:
+            <input type="date" name="to" value="<%= toIso %>">
+        </label>
+        <button class="btn" type="submit">Xem</button>
+        <span class="sub">Hiển thị danh sách cấp dưới; ô <b class="dot leave"></b> là ngày nghỉ đã duyệt, <b class="dot work"></b> là đi làm.</span>
+    </form>
 
-  <div class="grid">
-    <div class="card">
-      <h3>Đơn của bạn (mới nhất)</h3>
-      <div class="list">
-        <% if (mine == null || mine.isEmpty()) { %>
-          <div class="row"><span class="meta">Chưa có dữ liệu</span></div>
-        <% } else { for (model.RequestForLeave r : mine) {
-             String t = (r.getTitle()!=null && !r.getTitle().trim().isEmpty())
-                        ? r.getTitle() : ("Nghỉ " + r.getFrom() + " – " + r.getTo()); %>
-          <div class="row">
-            <div>
-              <div class="title"><%= t %></div>
-              <div class="meta">Tạo lúc: <%= r.getCreated_time() %></div>
-            </div>
-            <div class="right">
-              <span class="<%= statusCls(r.getStatus()) %>"><%= statusText(r.getStatus()) %></span>
-              <a class="btn" href="<%=ctx%>/request/detail?rid=<%=r.getRid()%>">Chi tiết</a>
-            </div>
-          </div>
-        <% } } %>
-      </div>
+    <div class="legend">
+        <span><span class="dot work"></span> Đi làm</span>
+        <span><span class="dot leave"></span> Nghỉ (đã duyệt)</span>
     </div>
 
-    <div class="card">
-      <h3>Đơn cấp dưới (mới nhất)</h3>
-      <div class="list">
-        <% if (subs == null || subs.isEmpty()) { %>
-          <div class="row"><span class="meta">Chưa có dữ liệu</span></div>
-        <% } else { for (model.RequestForLeave r : subs) {
-             String createdName = (r.getCreated_by()!=null && r.getCreated_by().getName()!=null)
-                                  ? r.getCreated_by().getName() : "Nhân viên";
-             String t = (r.getTitle()!=null && !r.getTitle().trim().isEmpty())
-                        ? r.getTitle() : ("Nghỉ " + r.getFrom() + " – " + r.getTo()); %>
-          <div class="row">
-            <div>
-              <div class="title"><%= t %></div>
-              <div class="meta">Người tạo: <b><%= createdName %></b> • Tạo lúc: <%= r.getCreated_time() %></div>
-            </div>
-            <div class="right">
-              <span class="<%= statusCls(r.getStatus()) %>"><%= statusText(r.getStatus()) %></span>
-              <a class="btn" href="<%=ctx%>/request/detail?rid=<%=r.getRid()%>">Chi tiết</a>
-            </div>
-          </div>
-        <% } } %>
-      </div>
+    <% if (!hasData) { %>
+        <div class="empty">Không có dữ liệu để hiển thị.</div>
+    <% } else { %>
+    <div class="table-wrap">
+        <table>
+            <thead>
+            <tr>
+                <th>Nhân sự</th>
+                <% for (LocalDate d : cols) { %>
+                    <th>
+                        <%= String.format("%02d/%02d", d.getDayOfMonth(), d.getMonthValue()) %>
+                    </th>
+                <% } %>
+            </tr>
+            </thead>
+            <tbody>
+            <%
+                for (Map<String,Object> r : rows) {
+                    String name = String.valueOf(r.get("name"));
+                    List<Integer> cells = (List<Integer>) r.get("cells"); // 1 = nghỉ, 0 = đi làm
+            %>
+                <tr>
+                    <td><%= name %></td>
+                    <%  for (int i = 0; i < cols.size(); i++) {
+                            Integer v = (cells != null && i < cells.size()) ? cells.get(i) : 0; // thiếu dữ liệu -> coi là 0
+                    %>
+                        <td class="<%= (v != null && v == 1) ? "leave" : "work" %>"></td>
+                    <% } %>
+                </tr>
+            <% } %>
+            </tbody>
+        </table>
     </div>
-  </div>
+    <% } %>
 </div>
 </body>
 </html>

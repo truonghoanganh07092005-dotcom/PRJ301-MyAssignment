@@ -1,7 +1,9 @@
 package controller.request;
 
 import controller.iam.BaseRequiredAuthenticationController;
+import dal.NotificationDBContext;
 import dal.RequestForLeaveDBContext;
+import dal.RequestHistoryDBContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -10,16 +12,31 @@ import model.iam.User;
 
 @WebServlet("/request/delete")
 public class DeleteController extends BaseRequiredAuthenticationController {
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        int rid = parseInt(req.getParameter("rid"));
-        boolean ok = new RequestForLeaveDBContext().deleteByOwnerIfInProgress(rid, user.getId());
         HttpSession s = req.getSession(false);
-        if (s != null) s.setAttribute("flash", ok ? "Đã XÓA đơn #" + rid : "Không thể xóa đơn #" + rid);
-        resp.sendRedirect(req.getContextPath() + "/request/my");
+        String ctx = req.getContextPath();
+        try {
+            int rid = Integer.parseInt(req.getParameter("rid"));
+            Integer prev = new RequestForLeaveDBContext().getStatus(rid);
+            boolean ok = new RequestForLeaveDBContext().deleteByOwnerIfInProgress(rid, user.getId());
+            if (ok) {
+                new RequestHistoryDBContext().add(
+                    rid, "DELETE", user.getId(),
+                    (user.getEmployee()==null)? null : user.getEmployee().getId(),
+                    prev, null, null
+                );
+                Integer managerUid = new RequestForLeaveDBContext().managerUidOfOwnerByRid(rid);
+                if (managerUid != null)
+                    new NotificationDBContext().create(managerUid, "Nhân viên đã XÓA đơn #"+rid+".", ctx+"/request/my");
+                if (s != null) s.setAttribute("flash", "Đã XÓA đơn #" + rid);
+            } else if (s != null) s.setAttribute("flash", "Không thể xóa đơn #" + rid);
+        } catch (Exception e) { if (s!=null) s.setAttribute("flash","Tham số không hợp lệ."); }
+        resp.sendRedirect(ctx + "/request/my");
     }
+
     @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException { doGet(req, resp, user); }
-    private int parseInt(String s){ try { return Integer.parseInt(s); } catch(Exception e){ return -1; } }
 }

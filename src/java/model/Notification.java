@@ -1,25 +1,30 @@
 package model;
 
-import java.util.Date;
+import java.sql.Timestamp;
 
 public class Notification extends BaseModel {
-    private int uid;
-    private String title;
-    private String content;
-    private String url;
-    private boolean read;
-    private Date createdTime;
+    private Integer nid;
+    private Integer uid;           // người nhận
+    private String  content;       // nội dung ngắn
+    private String  url;           // link điều hướng (có thể null)
+    private Timestamp created_time;
+    private Timestamp read_time;   // null = chưa đọc
 
-    public int getUid(){ return uid; }
-    public void setUid(int uid){ this.uid = uid; }
-    public String getTitle(){ return title; }
-    public void setTitle(String title){ this.title = title; }
-    public String getContent(){ return content; }
-    public void setContent(String content){ this.content = content; }
-    public String getUrl(){ return url; }
-    public void setUrl(String url){ this.url = url; }
-    public boolean isRead(){ return read; }
-    public void setRead(boolean read){ this.read = read; }
-    public Date getCreatedTime(){ return createdTime; }
-    public void setCreatedTime(Date createdTime){ this.createdTime = createdTime; }
+    public Integer getNid() { return nid; }
+    public void setNid(Integer nid) { this.nid = nid; }
+
+    public Integer getUid() { return uid; }
+    public void setUid(Integer uid) { this.uid = uid; }
+
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
+
+    public String getUrl() { return url; }
+    public void setUrl(String url) { this.url = url; }
+
+    public Timestamp getCreated_time() { return created_time; }
+    public void setCreated_time(Timestamp created_time) { this.created_time = created_time; }
+
+    public Timestamp getRead_time() { return read_time; }
+    public void setRead_time(Timestamp read_time) { this.read_time = read_time; }
 }

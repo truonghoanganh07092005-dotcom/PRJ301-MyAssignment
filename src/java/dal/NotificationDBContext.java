@@ -6,49 +6,82 @@ import model.Notification;
 
 public class NotificationDBContext extends DBContext<Notification> {
 
-    public void create(int uid, String title, String content, String url){
-        String sql = "INSERT INTO Notification(uid,title,content,url) VALUES(?,?,?,?)";
+    /** Tạo 1 thông báo cho 1 user (uid). Url có thể null. */
+    public void create(int uid, String content, String url) {
+        String sql = """
+            INSERT INTO Notification(uid, content, url, created_time)
+            VALUES (?, ?, ?, GETDATE())
+        """;
         try (PreparedStatement stm = connection.prepareStatement(sql)) {
             stm.setInt(1, uid);
-            stm.setString(2, title);
-            stm.setString(3, content);
-            stm.setString(4, url);
+            stm.setString(2, content);
+            if (url == null || url.isBlank()) stm.setNull(3, Types.NVARCHAR);
+            else stm.setString(3, url);
             stm.executeUpdate();
-        } catch (SQLException ex) { ex.printStackTrace(); }
+        } catch (SQLException e) { e.printStackTrace(); }
         finally { closeConnection(); }
     }
 
-    public ArrayList<Notification> listUnreadByUid(int uid, int limit){
+    /** Danh sách CHƯA ĐỌC (mới→cũ). */
+    public ArrayList<Notification> unread(int uid) {
         ArrayList<Notification> list = new ArrayList<>();
-        String sql = "SELECT TOP (?) nid,uid,title,content,url,is_read,created_time "
-                   + "FROM Notification WHERE uid=? ORDER BY created_time DESC";
+        String sql = """
+            SELECT nid, uid, content, url, created_time, read_time
+            FROM Notification
+            WHERE uid = ? AND read_time IS NULL
+            ORDER BY created_time DESC
+        """;
         try (PreparedStatement stm = connection.prepareStatement(sql)) {
-            stm.setInt(1, limit);
-            stm.setInt(2, uid);
+            stm.setInt(1, uid);
             ResultSet rs = stm.executeQuery();
-            while(rs.next()){
-                Notification n = new Notification();
-                n.setId(rs.getInt("nid"));
-                n.setUid(rs.getInt("uid"));
-                n.setTitle(rs.getString("title"));
-                n.setContent(rs.getString("content"));
-                n.setUrl(rs.getString("url"));
-                n.setRead(rs.getBoolean("is_read"));
-                n.setCreatedTime(rs.getTimestamp("created_time"));
-                list.add(n);
-            }
-        } catch (SQLException ex) { ex.printStackTrace(); }
+            while (rs.next()) list.add(map(rs));
+        } catch (SQLException e) { e.printStackTrace(); }
         finally { closeConnection(); }
         return list;
     }
 
-    public void markRead(int nid){
-        String sql = "UPDATE Notification SET is_read=1 WHERE nid=?";
+    /** Lấy N thông báo gần đây (đã/ chưa đọc). */
+    public ArrayList<Notification> recent(int uid, int limit) {
+        ArrayList<Notification> list = new ArrayList<>();
+        String sql = """
+            SELECT TOP (?) nid, uid, content, url, created_time, read_time
+            FROM Notification
+            WHERE uid = ?
+            ORDER BY created_time DESC
+        """;
         try (PreparedStatement stm = connection.prepareStatement(sql)) {
-            stm.setInt(1, nid);
-            stm.executeUpdate();
-        } catch (SQLException ex) { ex.printStackTrace(); }
+            stm.setInt(1, limit);
+            stm.setInt(2, uid);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) list.add(map(rs));
+        } catch (SQLException e) { e.printStackTrace(); }
         finally { closeConnection(); }
+        return list;
+    }
+
+    /** Đánh dấu đã đọc tất cả. */
+    public void readAll(int uid) {
+        String sql = """
+            UPDATE Notification
+            SET read_time = COALESCE(read_time, GETDATE())
+            WHERE uid = ? AND read_time IS NULL
+        """;
+        try (PreparedStatement stm = connection.prepareStatement(sql)) {
+            stm.setInt(1, uid);
+            stm.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+        finally { closeConnection(); }
+    }
+
+    private Notification map(ResultSet rs) throws SQLException {
+        Notification n = new Notification();
+        n.setNid(rs.getInt("nid"));
+        n.setUid(rs.getInt("uid"));
+        n.setContent(rs.getString("content"));
+        n.setUrl(rs.getString("url"));
+        n.setCreated_time(rs.getTimestamp("created_time"));
+        n.setRead_time(rs.getTimestamp("read_time"));
+        return n;
     }
 
     @Override public ArrayList<Notification> list(){ throw new UnsupportedOperationException(); }

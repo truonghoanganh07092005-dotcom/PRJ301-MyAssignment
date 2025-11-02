@@ -1,7 +1,9 @@
 package controller.request;
 
 import controller.iam.BaseRequiredAuthenticationController;
+import dal.NotificationDBContext;
 import dal.RequestForLeaveDBContext;
+import dal.RequestHistoryDBContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -20,7 +22,6 @@ public class RequestEditController extends BaseRequiredAuthenticationController 
             int rid = Integer.parseInt(req.getParameter("rid"));
             RequestForLeave r = new RequestForLeaveDBContext().get(rid);
             if (r == null) { resp.sendError(404); return; }
-
             req.setAttribute("edit", true);
             req.setAttribute("rid", String.valueOf(r.getRid()));
             req.setAttribute("form_title",  r.getTitle());
@@ -45,13 +46,25 @@ public class RequestEditController extends BaseRequiredAuthenticationController 
             Date to       = Date.valueOf(req.getParameter("to"));
             String reason = req.getParameter("reason");
 
+            Integer prev = new RequestForLeaveDBContext().getStatus(rid);
             boolean ok = new RequestForLeaveDBContext()
                     .updateByOwnerIfInProgress(rid, user.getId(), title, from, to, reason);
 
-            s.setAttribute("flash", ok ? "Đã lưu thay đổi đơn." : "Không thể sửa (chỉ khi In-Progress).");
-        } catch (Exception ex) {
-            s.setAttribute("flash", "Dữ liệu không hợp lệ.");
-        }
+            if (ok) {
+                new RequestHistoryDBContext().add(
+                    rid, "EDIT", user.getId(),
+                    (user.getEmployee()==null)? null : user.getEmployee().getId(),
+                    prev, prev, null
+                );
+                Integer managerUid = new RequestForLeaveDBContext().managerUidOfOwnerByRid(rid);
+                if (managerUid != null) {
+                    String url = ctx + "/request/detail?rid=" + rid;
+                    new NotificationDBContext().create(managerUid,
+                        "Đơn #"+rid+" đã được CHỈNH SỬA.", url);
+                }
+                s.setAttribute("flash","Đã lưu thay đổi đơn.");
+            } else s.setAttribute("flash","Không thể sửa (chỉ khi In-Progress).");
+        } catch (Exception ex) { s.setAttribute("flash","Dữ liệu không hợp lệ."); }
         resp.sendRedirect(ctx + "/request/my");
     }
 }

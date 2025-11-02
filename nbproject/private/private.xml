@@ -3,53 +3,61 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/DeleteController.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/dal/UserDBContext.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/RejectController.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/MyListController.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/Department.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/BaseModel.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/error/forbidden.jsp</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/index.jsp</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/Employee.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/RequestForLeave.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/CancelController.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/division/ViewAgendaController.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/request/review.jsp</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/home.jsp</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/request/create.jsp</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/RequestEditController.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/view/util/greeting.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/notify/NotifyController.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/dal/NotificationDBContext.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/iam/BaseRequiredAuthorizationController.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/iam/LoginController.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/META-INF/context.xml</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/request/detail.jsp</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/CreateController.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/view/auth/message.jsp</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/iam/Feature.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/view/profile.jsp</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/UncancelController.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/iam/BaseRequiredAuthenticationController.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/web.xml</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/iam/User.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/dal/DBContext.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/DetailController.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/UnapproveController.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/img/sonnt.jpg</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/ReviewController.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/request/print.jsp</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/partials/navbar.jsp</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/dal/RoleDBContext.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/profile/ProfileController.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/request/edit.jsp</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/iam/Role.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/PrintController.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/ApproveController.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/home/HomeController.java</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/request/list.jsp</file>
-            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/dal/RequestForLeaveDBContext.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/view/auth/login.jsp</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/division/agenda.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/DeleteController.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/dal/UserDBContext.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/MyListController.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/Department.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/RequestActionHistory.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/dal/RequestHistoryDBContext.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/index.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/Notification.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/RequestForLeave.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/notify/list.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/home.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/RequestEditController.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/view/util/greeting.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/iam/LoginController.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/request/detail.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/view/auth/message.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/view/profile.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/iam/BaseRequiredAuthenticationController.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/iam/User.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/DetailController.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/ReviewController.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/request/print.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/request/history.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/model/iam/Role.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/HistoryController.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/request/PrintController.java</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/web/WEB-INF/request/list.jsp</file>
+            <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/dal/RequestForLeaveDBContext.java</file>
             <file>file:/D:/PRJ_ASM/PRJ301-MyAssignment/src/java/controller/iam/LogoutController.java</file>
         </group>
     </open-files>

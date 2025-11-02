@@ -1,43 +1,51 @@
 <%@ page contentType="text/html; charset=UTF-8" %>
-<%@ page import="java.util.*,model.RequestActionHistory" %>
+<%@ page import="java.util.*,model.RequestActionHistoryRow" %>
 <%
-  String ctx = request.getContextPath();
-  int rid = Integer.parseInt(String.valueOf(request.getAttribute("rid")));
-  @SuppressWarnings("unchecked")
-  List<RequestActionHistory> history = (List<RequestActionHistory>) request.getAttribute("history");
+  List<RequestActionHistoryRow> rows = (List<RequestActionHistoryRow>) request.getAttribute("rows");
+  String rid = String.valueOf(request.getAttribute("rid"));
 %>
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
-<meta charset="UTF-8"><title>Lịch sử đơn #<%=rid%></title>
+<meta charset="UTF-8">
+<title>Lịch sử đơn #<%=rid%></title>
 <style>
-  body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#f6f7fb;margin:0}
-  .page{max-width:900px;margin:24px auto;background:#fff;border:1px solid #e6e9f0;border-radius:14px;padding:18px}
-  h1{margin:6px 0 16px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:10px;border-bottom:1px solid #eef2f6;text-align:left}
-  th{background:#111827;color:#fff}
-  .muted{color:#64748b}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:24px;color:#222}
+h1{font-size:32px}
+table{border-collapse:collapse;width:100%;margin-top:12px}
+th,td{border-bottom:1px solid #eee;padding:10px;text-align:left}
+th{background:#fafafa}
+.note{opacity:.85}
+.time{opacity:.6}
 </style>
 </head>
 <body>
-  <div class="page">
-    <a href="<%=ctx%>/request/detail?rid=<%=rid%>">← Chi tiết</a>
-    <h1>Lịch sử đơn #<%=rid%></h1>
-    <table>
-      <tr><th>Thời gian</th><th>Hành động</th><th>Người thực hiện</th><th>Trạng thái</th><th>Ghi chú</th></tr>
-      <% if (history==null || history.isEmpty()) { %>
-        <tr><td colspan="5" class="muted">Chưa có lịch sử.</td></tr>
-      <% } else { for (RequestActionHistory h : history) { %>
-        <tr>
-          <td><%= h.getCreatedTime() %></td>
-          <td><b><%= h.getAction() %></b></td>
-          <td><%= (h.getActor()!=null && h.getActor().getName()!=null)? h.getActor().getName() : "—" %></td>
-          <td><%= h.getPrevStatus()==null? "—" : h.getPrevStatus() %> → <%= h.getNewStatus()==null? "—" : h.getNewStatus() %></td>
-          <td><%= h.getNote()==null? "" : h.getNote() %></td>
-        </tr>
-      <% } } %>
-    </table>
-  </div>
+  <h1>Lịch sử đơn #<%=rid%></h1>
+  <table>
+    <tr>
+      <th>Thời gian</th>
+      <th>Hành động</th>
+      <th>Người thực hiện</th>
+      <th>Trạng thái trước → sau</th>
+      <th>Ghi chú</th>
+    </tr>
+    <%
+      for (RequestActionHistoryRow r : rows) {
+        String actor = r.getActorName()!=null ? r.getActorName() : (r.getActorUid()==null? "-" : ("UID "+r.getActorUid()));
+        String trans = (r.getPrevStatus()==null? "-" : String.valueOf(r.getPrevStatus()))
+                     + " → "
+                     + (r.getNewStatus()==null? "-" : String.valueOf(r.getNewStatus()));
+    %>
+      <tr>
+        <td class="time"><%= r.getCreatedTime() %></td>
+        <td><%= r.getAction() %></td>
+        <td><%= actor %></td>
+        <td><%= trans %></td>
+        <td class="note"><%= r.getNote()==null? "" : r.getNote() %></td>
+      </tr>
+    <%
+      }
+    %>
+  </table>
 </body>
 </html>

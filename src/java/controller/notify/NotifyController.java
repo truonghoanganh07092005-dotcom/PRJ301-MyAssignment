@@ -12,20 +12,23 @@ import model.iam.User;
 
 @WebServlet("/notify")
 public class NotifyController extends BaseRequiredAuthenticationController {
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        ArrayList<Notification> list = new NotificationDBContext().listUnreadByUid(user.getId(), 50);
-        req.setAttribute("list", list);
-        req.getRequestDispatcher("/WEB-INF/notify/list.jsp").forward(req, resp);
+        NotificationDBContext db = new NotificationDBContext();
+        ArrayList<Notification> unread = db.unread(user.getId());
+        ArrayList<Notification> recent = new NotificationDBContext().recent(user.getId(), 20);
+        req.setAttribute("unread", unread);
+        req.setAttribute("recent", recent);
+        req.getRequestDispatcher("/WEB-INF/notify.jsp").forward(req, resp);
     }
+
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        String nid = req.getParameter("nid");
-        if (nid != null) {
-            try { new NotificationDBContext().markRead(Integer.parseInt(nid)); }
-            catch (Exception ignore){}
+        if ("all".equals(req.getParameter("mark"))) {
+            new NotificationDBContext().readAll(user.getId());
         }
         resp.sendRedirect(req.getContextPath() + "/notify");
     }
