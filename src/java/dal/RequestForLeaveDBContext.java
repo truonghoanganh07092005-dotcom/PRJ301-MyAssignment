@@ -421,5 +421,51 @@ public boolean unapproveWithin24h(int rid, int managerUid) {
     } catch (SQLException ex) { ex.printStackTrace(); return false; }
     finally { closeConnection(); }
 }
+public Integer ownerUidByRid(int rid){
+    String sql = """
+        SELECT TOP 1 en.uid
+        FROM RequestForLeave r
+        JOIN Enrollment en ON en.eid = r.created_by AND en.active = 1
+        WHERE r.rid = ?
+    """;
+    try (PreparedStatement stm = connection.prepareStatement(sql)){
+        stm.setInt(1, rid);
+        ResultSet rs = stm.executeQuery();
+        if (rs.next()) return rs.getInt(1);
+    } catch (SQLException ex){ ex.printStackTrace(); }
+    finally { closeConnection(); }
+    return null;
+}
+
+/** Lấy UID của quản lý trực tiếp của chủ đơn (nếu có) */
+public Integer managerUidOfOwnerByRid(int rid){
+    String sql = """
+        SELECT TOP 1 enmgr.uid
+        FROM RequestForLeave r
+        JOIN Employee e    ON e.eid = r.created_by
+        JOIN Enrollment en ON en.eid = COALESCE(e.manager_id, e.supervisorid) AND en.active = 1
+        JOIN Enrollment enmgr ON enmgr.eid = en.eid AND enmgr.active = 1
+        WHERE r.rid = ?
+    """;
+    try (PreparedStatement stm = connection.prepareStatement(sql)){
+        stm.setInt(1, rid);
+        ResultSet rs = stm.executeQuery();
+        if (rs.next()) return rs.getInt(1);
+    } catch (SQLException ex){ ex.printStackTrace(); }
+    finally { closeConnection(); }
+    return null;
+}
+
+/** Lấy trạng thái hiện tại của đơn */
+public Integer getStatus(int rid){
+    String sql = "SELECT status FROM RequestForLeave WHERE rid=?";
+    try (PreparedStatement stm = connection.prepareStatement(sql)){
+        stm.setInt(1, rid);
+        ResultSet rs = stm.executeQuery();
+        if (rs.next()) return (Integer) rs.getObject(1);
+    } catch (SQLException ex){ ex.printStackTrace(); }
+    finally { closeConnection(); }
+    return null;
+}
 
 }

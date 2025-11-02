@@ -6,6 +6,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<jsp:include page="/WEB-INF/partials/navbar.jsp"/>
 <title>Duyệt đơn cấp dưới</title>
 <style>
 body{font-family:system-ui;background:#f6f7fb;margin:0;padding:20px}
