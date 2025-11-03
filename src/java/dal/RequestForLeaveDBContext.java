@@ -751,34 +751,29 @@ public java.util.List<SimpleEmp> subordinatesOfManaged(int managerUid) {
 public java.util.List<AgendaItem> agendaOfSubordinates(int managerUid,
                                                        java.sql.Date from,
                                                        java.sql.Date to) {
-    String sql = """
-        WITH mgr AS (
-            SELECT TOP 1 en.eid AS manager_eid
-            FROM Enrollment en
-            WHERE en.uid = ? AND en.active = 1
-        ),
-        S AS (
-            -- Schema mới: created_by = EID
-            SELECT r.created_by AS eid, e.ename, r.[from], r.[to], r.status
-            FROM RequestForLeave r
-            JOIN Employee e ON e.eid = r.created_by
-            WHERE COALESCE(e.manager_id, e.supervisorid) = (SELECT manager_eid FROM mgr)
-
-            UNION ALL
-
-            -- Schema cũ: created_by = UID -> map UID -> EID
-            SELECT en2.eid AS eid, e2.ename, r.[from], r.[to], r.status
-            FROM RequestForLeave r
-            JOIN Enrollment en2 ON en2.uid = r.created_by AND en2.active = 1
-            JOIN Employee   e2  ON e2.eid = en2.eid
-            WHERE COALESCE(e2.manager_id, e2.supervisorid) = (SELECT manager_eid FROM mgr)
+   String sql = """
+    WITH mgr AS (
+        SELECT TOP 1 en.eid AS manager_eid
+        FROM Enrollment en
+        WHERE en.uid = ? AND en.active = 1
+    ),
+    S AS (
+        -- Lấy đơn của cấp dưới TRỰC TIẾP + chính quản lý
+        SELECT r.created_by AS eid, e.ename, r.[from], r.[to], r.status
+        FROM RequestForLeave r
+        JOIN Employee e ON e.eid = r.created_by
+        WHERE (
+            COALESCE(e.manager_id, e.supervisorid) = (SELECT manager_eid FROM mgr)
+            OR e.eid = (SELECT manager_eid FROM mgr)      -- thêm: hiện cả bạn
         )
-        SELECT eid, ename, [from], [to]
-        FROM S
-        WHERE status = 1                                -- chỉ đơn ĐÃ DUYỆT
-          AND NOT ([to] < ? OR [from] > ?)             -- giao với [from..to]
-        ORDER BY ename, [from]
-    """;
+    )
+    SELECT eid, ename, [from], [to]
+    FROM S
+    WHERE status = 1                         -- chỉ đơn đã duyệt
+      AND [to]   >= ?                        -- giao nhau với khoảng chọn
+      AND [from] <= ?
+    ORDER BY ename, [from];
+""";
 
     java.util.List<AgendaItem> list = new java.util.ArrayList<>();
     try (PreparedStatement stm = connection.prepareStatement(sql)) {
