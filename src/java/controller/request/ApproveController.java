@@ -16,9 +16,7 @@ public class ApproveController extends BaseRequiredAuthorizationController {
     protected boolean isAuthorized(User user, HttpServletRequest req) {
         try {
             int rid = Integer.parseInt(req.getParameter("rid"));
-            // chỉ kiểm tra có thể duyệt theo nghiệp vụ (In-Progress & đúng manager)
-            // ủy quyền chi tiết nằm ở DB update, nên ở đây cho phép vào trang
-            return true;
+            return new RequestForLeaveDBContext().canApprove(rid, user.getId());
         } catch (Exception e) { return false; }
     }
 
@@ -27,30 +25,29 @@ public class ApproveController extends BaseRequiredAuthorizationController {
             throws ServletException, IOException {
         HttpSession s = req.getSession();
         String ctx = req.getContextPath();
+
         try {
             int rid = Integer.parseInt(req.getParameter("rid"));
-
-            Integer prev = new RequestForLeaveDBContext().getStatus(rid);
             boolean ok = new RequestForLeaveDBContext()
                     .approveByManagerIfInProgress(rid, user.getId());
 
             if (ok) {
-                new RequestHistoryDBContext().add(
-                    rid, "APPROVE", user.getId(),
-                    (user.getEmployee()==null)? null : user.getEmployee().getId(),
-                    prev, 1, null
-                );
+                new RequestHistoryDBContext().add(rid, user.getId(), "APPROVED", null);
+
                 Integer ownerUid = new RequestForLeaveDBContext().ownerUidByRid(rid);
                 if (ownerUid != null) {
-                    String url = ctx + "/request/detail?rid=" + rid;
-                    new NotificationDBContext().create(ownerUid,
-                        "Đơn #" + rid + " đã được DUYỆT.", url);
+                    new NotificationDBContext().push(
+                        ownerUid, "Đơn #" + rid + " được duyệt",
+                        "Quản lý đã duyệt đơn của bạn.", rid
+                    );
                 }
                 s.setAttribute("flash", "Đã DUYỆT đơn #" + rid);
             } else {
-                s.setAttribute("flash","Không thể duyệt đơn (chỉ khi In-Progress & đúng cấp).");
+                s.setAttribute("flash","Không thể duyệt (chỉ khi In-Progress & đúng cấp).");
             }
-        } catch (Exception ex) { s.setAttribute("flash","Tham số không hợp lệ."); }
+        } catch (Exception ex) {
+            s.setAttribute("flash","Tham số không hợp lệ.");
+        }
 
         String back = req.getHeader("Referer");
         resp.sendRedirect(back != null ? back : (ctx + "/home"));

@@ -3,28 +3,32 @@ package model;
 import java.sql.Timestamp;
 
 public class Notification extends BaseModel {
-    private Integer nid;
-    private Integer uid;           // người nhận
-    private String  content;       // nội dung ngắn
-    private String  url;           // link điều hướng (có thể null)
+    private int nid;
+    private int uidTarget;
+    private String title;
+    private String content;         // có thể là message hoặc URL
     private Timestamp created_time;
-    private Timestamp read_time;   // null = chưa đọc
+    private boolean is_read;
+    private Integer rid;            // đơn liên quan (có thể null)
 
-    public Integer getNid() { return nid; }
-    public void setNid(Integer nid) { this.nid = nid; }
+    public int getNid() { return nid; }
+    public void setNid(int nid) { this.nid = nid; }
 
-    public Integer getUid() { return uid; }
-    public void setUid(Integer uid) { this.uid = uid; }
+    public int getUidTarget() { return uidTarget; }
+    public void setUidTarget(int uidTarget) { this.uidTarget = uidTarget; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
 
-    public String getUrl() { return url; }
-    public void setUrl(String url) { this.url = url; }
-
     public Timestamp getCreated_time() { return created_time; }
     public void setCreated_time(Timestamp created_time) { this.created_time = created_time; }
 
-    public Timestamp getRead_time() { return read_time; }
-    public void setRead_time(Timestamp read_time) { this.read_time = read_time; }
+    public boolean isIs_read() { return is_read; }
+    public void setIs_read(boolean is_read) { this.is_read = is_read; }
+
+    public Integer getRid() { return rid; }
+    public void setRid(Integer rid) { this.rid = rid; }
 }

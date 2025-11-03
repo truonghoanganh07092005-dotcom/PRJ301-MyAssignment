@@ -10,37 +10,42 @@ import jakarta.servlet.http.*;
 import java.io.IOException;
 import model.iam.User;
 
-@WebServlet(urlPatterns = "/request/reject")
+@WebServlet("/request/reject")
 public class RejectController extends BaseRequiredAuthorizationController {
+
+    protected boolean isAuthorized(User user, HttpServletRequest req) {
+        try {
+            int rid = Integer.parseInt(req.getParameter("rid"));
+            return new RequestForLeaveDBContext().canReject(rid, user.getId());
+        } catch (Exception e) { return false; }
+    }
 
     @Override
     protected void processGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
         HttpSession s = req.getSession();
         String ctx = req.getContextPath();
+
         try {
             int rid = Integer.parseInt(req.getParameter("rid"));
-
-            Integer prev = new RequestForLeaveDBContext().getStatus(rid);
             boolean ok = new RequestForLeaveDBContext()
                     .rejectByManagerIfInProgress(rid, user.getId());
-
             if (ok) {
-                new RequestHistoryDBContext().add(
-                    rid, "REJECT", user.getId(),
-                    (user.getEmployee()==null)? null : user.getEmployee().getId(),
-                    prev, 2, null
-                );
+                new RequestHistoryDBContext().add(rid, user.getId(), "REJECTED", null);
                 Integer ownerUid = new RequestForLeaveDBContext().ownerUidByRid(rid);
                 if (ownerUid != null) {
-                    String url = ctx + "/request/detail?rid=" + rid;
-                    new NotificationDBContext().create(ownerUid,
-                        "Đơn #"+rid+" đã bị TỪ CHỐI.", url);
+                    new NotificationDBContext().push(
+                        ownerUid, "Đơn #" + rid + " bị từ chối",
+                        "Quản lý đã từ chối đơn của bạn.", rid
+                    );
                 }
-                s.setAttribute("flash","ĐÃ TỪ CHỐI đơn #"+rid);
-            } else s.setAttribute("flash","Không thể từ chối (chỉ khi In-Progress & đúng cấp).");
-        } catch (Exception ex) { s.setAttribute("flash","Tham số không hợp lệ."); }
-
+                s.setAttribute("flash", "Đã TỪ CHỐI đơn #" + rid);
+            } else {
+                s.setAttribute("flash", "Không thể từ chối (yêu cầu In-Progress & đúng cấp).");
+            }
+        } catch (Exception ex) {
+            s.setAttribute("flash", "Tham số không hợp lệ.");
+        }
         String back = req.getHeader("Referer");
         resp.sendRedirect(back != null ? back : (ctx + "/home"));
     }

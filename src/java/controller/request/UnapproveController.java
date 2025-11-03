@@ -13,32 +13,38 @@ import model.iam.User;
 @WebServlet("/request/unapprove")
 public class UnapproveController extends BaseRequiredAuthorizationController {
 
+    protected boolean isAuthorized(User user, HttpServletRequest req) {
+        try {
+            int rid = Integer.parseInt(req.getParameter("rid"));
+            return new RequestForLeaveDBContext().canUnapprove(rid, user.getId());
+        } catch (Exception e) { return false; }
+    }
+
     @Override
     protected void processGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
         HttpSession s = req.getSession();
         String ctx = req.getContextPath();
+
         try {
             int rid = Integer.parseInt(req.getParameter("rid"));
-            Integer prev = new RequestForLeaveDBContext().getStatus(rid);
-
             boolean ok = new RequestForLeaveDBContext().unapproveWithin24h(rid, user.getId());
             if (ok) {
-                new RequestHistoryDBContext().add(
-                    rid, "UNAPPROVE", user.getId(),
-                    (user.getEmployee()==null)? null : user.getEmployee().getId(),
-                    prev, 0, null
-                );
+                new RequestHistoryDBContext().add(rid, user.getId(), "UNAPPROVED", null);
                 Integer ownerUid = new RequestForLeaveDBContext().ownerUidByRid(rid);
                 if (ownerUid != null) {
-                    String url = ctx + "/request/detail?rid=" + rid;
-                    new NotificationDBContext().create(ownerUid,
-                        "Đơn #"+rid+" đã HỦY DUYỆT/TỪ CHỐI (về In-Progress).", url);
+                    new NotificationDBContext().push(
+                        ownerUid, "Đơn #" + rid + " trở lại chờ duyệt",
+                        "Quản lý hủy quyết định trong 24 giờ.", rid
+                    );
                 }
-                s.setAttribute("flash","Đã hủy duyệt/từ chối – đơn quay về In-Progress.");
-            } else s.setAttribute("flash","Không thể hủy (chỉ trong 24h & đúng người xử lý).");
-        } catch (Exception e) { s.setAttribute("flash","Tham số không hợp lệ."); }
-
+                s.setAttribute("flash", "Đã HỦY DUYỆT/TỪ CHỐI đơn #" + rid);
+            } else {
+                s.setAttribute("flash", "Không thể hủy duyệt/từ chối (quá 24h hoặc sai người xử lý).");
+            }
+        } catch (Exception ex) {
+            s.setAttribute("flash", "Tham số không hợp lệ.");
+        }
         String back = req.getHeader("Referer");
         resp.sendRedirect(back != null ? back : (ctx + "/home"));
     }

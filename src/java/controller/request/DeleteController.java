@@ -18,25 +18,41 @@ public class DeleteController extends BaseRequiredAuthenticationController {
             throws ServletException, IOException {
         HttpSession s = req.getSession(false);
         String ctx = req.getContextPath();
+
         try {
             int rid = Integer.parseInt(req.getParameter("rid"));
-            Integer prev = new RequestForLeaveDBContext().getStatus(rid);
-            boolean ok = new RequestForLeaveDBContext().deleteByOwnerIfInProgress(rid, user.getId());
+
+            boolean ok = new RequestForLeaveDBContext()
+                    .deleteByOwnerIfInProgress(rid, user.getId());
+
             if (ok) {
-                new RequestHistoryDBContext().add(
-                    rid, "DELETE", user.getId(),
-                    (user.getEmployee()==null)? null : user.getEmployee().getId(),
-                    prev, null, null
-                );
+                // Lịch sử
+                new RequestHistoryDBContext().add(rid, user.getId(), "DELETED", null);
+
+                // Notify quản lý
                 Integer managerUid = new RequestForLeaveDBContext().managerUidOfOwnerByRid(rid);
-                if (managerUid != null)
-                    new NotificationDBContext().create(managerUid, "Nhân viên đã XÓA đơn #"+rid+".", ctx+"/request/my");
+                if (managerUid != null) {
+                    new NotificationDBContext().push(
+                        managerUid,
+                        "Nhân viên đã XÓA đơn #" + rid,
+                        "Đơn đã bị xóa bởi chủ đơn.",
+                        rid
+                    );
+                }
                 if (s != null) s.setAttribute("flash", "Đã XÓA đơn #" + rid);
-            } else if (s != null) s.setAttribute("flash", "Không thể xóa đơn #" + rid);
-        } catch (Exception e) { if (s!=null) s.setAttribute("flash","Tham số không hợp lệ."); }
+            } else {
+                if (s != null) s.setAttribute("flash", "Không thể xóa đơn #" + rid + " (chỉ khi In-Progress & là chủ đơn).");
+            }
+        } catch (Exception e) {
+            if (s != null) s.setAttribute("flash", "Tham số không hợp lệ.");
+        }
+
         resp.sendRedirect(ctx + "/request/my");
     }
 
-    @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp, User user)
-            throws ServletException, IOException { doGet(req, resp, user); }
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp, User user)
+            throws ServletException, IOException {
+        doGet(req, resp, user);
+    }
 }

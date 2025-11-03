@@ -795,6 +795,70 @@ public java.util.List<AgendaItem> agendaOfSubordinates(int managerUid,
     return list;
 }
 // ===================== END AGENDA (SINGLE) =====================
+/* ===================== AGENDA – XEM TẤT CẢ ===================== */
+
+/** Lấy toàn bộ nhân sự để vẽ tất cả các hàng trên Agenda */
+public java.util.List<SimpleEmp> listAllEmployees() {
+    String sql = """
+        SELECT e.eid, e.ename
+        FROM Employee e
+        ORDER BY e.ename
+    """;
+    java.util.List<SimpleEmp> list = new java.util.ArrayList<>();
+    try (PreparedStatement stm = connection.prepareStatement(sql);
+         ResultSet rs = stm.executeQuery()) {
+        while (rs.next()) {
+            list.add(new SimpleEmp(rs.getInt("eid"), rs.getString("ename")));
+        }
+    } catch (SQLException ex) { ex.printStackTrace(); }
+    finally { closeConnection(); }
+    return list;
+}
+
+/** Các khoảng NGHỈ ĐÃ DUYỆT (status=1) của TẤT CẢ nhân sự trong [from..to]
+ *  - Hỗ trợ cả dữ liệu cũ (created_by=UID) và mới (created_by=EID)
+ */
+public java.util.List<AgendaItem> agendaOfAll(java.sql.Date from, java.sql.Date to) {
+    String sql = """
+        WITH S AS (
+            -- created_by = EID
+            SELECT r.created_by AS eid, e.ename, r.[from], r.[to], r.status
+            FROM RequestForLeave r
+            JOIN Employee e ON e.eid = r.created_by
+
+            UNION ALL
+            -- created_by = UID -> map EID qua Enrollment
+            SELECT en2.eid, e2.ename, r.[from], r.[to], r.status
+            FROM RequestForLeave r
+            JOIN Enrollment en2 ON en2.uid = r.created_by AND en2.active = 1
+            JOIN Employee   e2  ON e2.eid = en2.eid
+        )
+        SELECT eid, ename, [from], [to]
+        FROM S
+        WHERE status = 1
+          AND [to]   >= ?
+          AND [from] <= ?
+        ORDER BY ename, [from]
+    """;
+    java.util.List<AgendaItem> list = new java.util.ArrayList<>();
+    try (PreparedStatement stm = connection.prepareStatement(sql)) {
+        stm.setDate(1, from);
+        stm.setDate(2, to);
+        try (ResultSet rs = stm.executeQuery()) {
+            while (rs.next()) {
+                list.add(new AgendaItem(
+                        rs.getInt("eid"),
+                        rs.getString("ename"),
+                        rs.getDate("from"),
+                        rs.getDate("to")
+                ));
+            }
+        }
+    } catch (SQLException ex) { ex.printStackTrace(); }
+    finally { closeConnection(); }
+    return list;
+}
+/* =================== END AGENDA – XEM TẤT CẢ =================== */
 
 
 }

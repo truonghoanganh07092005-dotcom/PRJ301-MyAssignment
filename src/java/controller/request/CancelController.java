@@ -1,6 +1,6 @@
 package controller.request;
 
-import controller.iam.BaseRequiredAuthenticationController;
+import controller.iam.BaseRequiredAuthorizationController;
 import dal.NotificationDBContext;
 import dal.RequestForLeaveDBContext;
 import dal.RequestHistoryDBContext;
@@ -11,37 +11,45 @@ import java.io.IOException;
 import model.iam.User;
 
 @WebServlet("/request/cancel")
-public class CancelController extends BaseRequiredAuthenticationController {
+public class CancelController extends BaseRequiredAuthorizationController {
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user)
-            throws ServletException, IOException {
-        HttpSession s = req.getSession(false);
-        String ctx = req.getContextPath();
-        int rid = -1;
-        try {
-            rid = Integer.parseInt(req.getParameter("rid"));
-            Integer prev = new RequestForLeaveDBContext().getStatus(rid);
-            boolean ok = new RequestForLeaveDBContext().cancelByOwnerIfInProgress(rid, user.getId());
-            if (ok) {
-                new RequestHistoryDBContext().add(
-                    rid, "CANCEL", user.getId(),
-                    (user.getEmployee()==null)? null : user.getEmployee().getId(),
-                    prev, 3, null
-                );
-                Integer managerUid = new RequestForLeaveDBContext().managerUidOfOwnerByRid(rid);
-                if (managerUid != null) {
-                    String url = ctx + "/request/detail?rid=" + rid;
-                    new NotificationDBContext().create(managerUid,
-                        "Nhân viên đã HỦY đơn #"+rid+".", url);
-                }
-                if (s!=null) s.setAttribute("flash","Đã HỦY đơn #"+rid);
-            } else if (s!=null) s.setAttribute("flash","Không thể hủy đơn #"+rid);
-        } catch (Exception ignore) { if (s!=null) s.setAttribute("flash","Tham số không hợp lệ."); }
-
-        resp.sendRedirect(ctx + "/request/my");
+    protected boolean isAuthorized(User user, HttpServletRequest req) {
+        // cho phép vào, ràng buộc nằm ở update (chỉ owner & status=0 mới hủy)
+        try { Integer.parseInt(req.getParameter("rid")); return true; }
+        catch (Exception e) { return false; }
     }
 
-    @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp, User user)
-            throws ServletException, IOException { doGet(req, resp, user); }
+    @Override
+    protected void processGet(HttpServletRequest req, HttpServletResponse resp, User user)
+            throws ServletException, IOException {
+        HttpSession s = req.getSession();
+        String ctx = req.getContextPath();
+
+        try {
+            int rid = Integer.parseInt(req.getParameter("rid"));
+            boolean ok = new RequestForLeaveDBContext()
+                    .cancelByOwnerIfInProgress(rid, user.getId());
+            if (ok) {
+                new RequestHistoryDBContext().add(rid, user.getId(), "CANCELLED", null);
+                Integer managerUid = new RequestForLeaveDBContext().managerUidOfOwnerByRid(rid);
+                if (managerUid != null) {
+                    new NotificationDBContext().push(
+                        managerUid, "Đơn #" + rid + " đã hủy",
+                        "Chủ đơn hủy khi đang chờ duyệt.", rid
+                    );
+                }
+                s.setAttribute("flash", "Đã HỦY đơn #" + rid);
+            } else {
+                s.setAttribute("flash", "Chỉ chủ đơn & trạng thái In-Progress mới hủy được.");
+            }
+        } catch (Exception ex) {
+            s.setAttribute("flash", "Tham số không hợp lệ.");
+        }
+        String back = req.getHeader("Referer");
+        resp.sendRedirect(back != null ? back : (ctx + "/home"));
+    }
+
+    @Override
+    protected void processPost(HttpServletRequest req, HttpServletResponse resp, User user)
+            throws ServletException, IOException { processGet(req, resp, user); }
 }
